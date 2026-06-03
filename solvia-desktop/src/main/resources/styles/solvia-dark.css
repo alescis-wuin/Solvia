@@ -1,0 +1,57 @@
+.root {
+    -solvia-bg: #07111f;
+    -solvia-surface: #0f1d2d;
+    -solvia-raised: #16263a;
+    -solvia-border: #5b78a3;
+    -solvia-text: #f3f8ff;
+    -solvia-muted: #b9c9de;
+    -solvia-accent: #72f2c5;
+    -fx-background-color: -solvia-bg;
+    -fx-font-family: "Luciole", "Noto Sans", "System";
+    -fx-font-size: 16px;
+}
+.label { -fx-text-fill: -solvia-text; }
+.app-title { -fx-font-size: 26px; -fx-font-weight: 800; -fx-text-fill: -solvia-accent; }
+.screen-title { -fx-font-size: 24px; -fx-font-weight: 800; }
+.solvia-shell, .content-view { -fx-background-color: -solvia-bg; }
+.header, .footer, .sidebar, .card, .form-card, .table-view, .chart {
+    -fx-background-color: -solvia-surface;
+    -fx-border-color: -solvia-border;
+    -fx-border-width: 1px;
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+}
+.header, .footer, .card, .form-card { -fx-padding: 18px; }
+.sidebar { -fx-padding: 22px 14px; }
+.metric-value, .monospace, .text-field, .combo-box, .date-picker, .table-cell {
+    -fx-font-family: "Hack", "Noto Sans Mono", "monospace";
+}
+.metric-value { -fx-font-size: 24px; -fx-font-weight: 800; -fx-text-fill: -solvia-accent; }
+.help-text { -fx-text-fill: -solvia-muted; }
+.button {
+    -fx-min-height: 44px;
+    -fx-padding: 10px 18px;
+    -fx-font-weight: 700;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-cursor: hand;
+}
+.button:focused, .text-field:focused, .combo-box:focused, .date-picker:focused, .table-view:focused {
+    -fx-border-color: -solvia-accent;
+    -fx-border-width: 2px;
+}
+.text-field, .combo-box, .date-picker {
+    -fx-min-height: 42px;
+    -fx-pref-height: 42px;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+}
+.table-row-cell { -fx-cell-size: 40px; }
+.chart-plot-background { -fx-background-color: #081827; }
+.tooltip {
+    -fx-font-size: 14px;
+    -fx-background-color: #eef6ff;
+    -fx-text-fill: #07111f;
+    -fx-background-radius: 10px;
+    -fx-padding: 8px 10px;
+}
