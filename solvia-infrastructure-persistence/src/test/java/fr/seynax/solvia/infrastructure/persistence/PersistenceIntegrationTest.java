@@ -8,8 +8,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import javax.sql.DataSource;
-
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.flywaydb.core.Flyway;
@@ -49,7 +47,7 @@ import fr.seynax.solvia.infrastructure.persistence.market.MarketPriceJdbcReposit
 import fr.seynax.solvia.infrastructure.persistence.position.PositionJdbcRepository;
 import fr.seynax.solvia.infrastructure.persistence.position.PositionSnapshotJdbcRepository;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class PersistenceIntegrationTest {
 
     @Container
