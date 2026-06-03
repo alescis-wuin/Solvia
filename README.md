@@ -44,7 +44,7 @@ market data.
 | Database | PostgreSQL |
 | Migrations | Flyway |
 | Persistence access | Spring JDBC `JdbcClient` |
-| API style | REST, OpenAPI later |
+| API style | REST, validation, repository-backed adapters, static OpenAPI |
 | Build | Maven multi-module |
 | Security stance | Local-first, no external telemetry |
 
@@ -77,6 +77,37 @@ mvn -pl solvia-backend spring-boot:run
 ```
 
 The backend binds to `127.0.0.1` by default.
+
+## API endpoints
+
+```text
+GET    /api/accounts
+POST   /api/accounts
+GET    /api/accounts/{id}
+PUT    /api/accounts/{id}
+DELETE /api/accounts/{id}
+
+GET    /api/assets
+POST   /api/assets
+GET    /api/assets/{id}
+PUT    /api/assets/{id}
+DELETE /api/assets/{id}
+
+GET    /api/accounts/{accountId}/positions
+POST   /api/positions
+GET    /api/positions/{id}
+PUT    /api/positions/{id}
+DELETE /api/positions/{id}
+
+POST   /api/account-snapshots
+GET    /api/accounts/{accountId}/snapshots
+POST   /api/position-snapshots
+GET    /api/positions/{positionId}/snapshots
+POST   /api/cash-flows
+GET    /api/accounts/{accountId}/cash-flows
+
+GET    /api/openapi.yaml
+```
 
 ## Run desktop shell
 
