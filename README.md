@@ -43,6 +43,7 @@ market data.
 | Desktop | JavaFX |
 | Database | PostgreSQL |
 | Migrations | Flyway |
+| Persistence access | Spring JDBC `JdbcClient` |
 | API style | REST, OpenAPI later |
 | Build | Maven multi-module |
 | Security stance | Local-first, no external telemetry |
@@ -53,6 +54,7 @@ market data.
 Solvia/
 ├─ solvia-domain/
 ├─ solvia-application/
+├─ solvia-infrastructure-persistence/
 ├─ solvia-backend/
 ├─ solvia-desktop/
 ├─ docs/

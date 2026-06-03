@@ -10,46 +10,46 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>solvia-backend</artifactId>
-    <name>Solvia Backend</name>
+    <artifactId>solvia-infrastructure-persistence</artifactId>
+    <name>Solvia Infrastructure Persistence</name>
 
     <dependencies>
-        <dependency>
-            <groupId>fr.seynax.solvia</groupId>
-            <artifactId>solvia-application</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>fr.seynax.solvia</groupId>
             <artifactId>solvia-domain</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>fr.seynax.solvia</groupId>
-            <artifactId>solvia-infrastructure-persistence</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc</artifactId>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 </project>

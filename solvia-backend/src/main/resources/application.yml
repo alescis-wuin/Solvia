@@ -5,6 +5,12 @@ server:
 spring:
   application:
     name: solvia-backend
+  datasource:
+    url: ${SOLVIA_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/solvia}
+    username: ${SOLVIA_DATASOURCE_USERNAME:solvia}
+    password: ${SOLVIA_DATASOURCE_PASSWORD:solvia-local}
+  flyway:
+    enabled: true
 
 management:
   endpoints:

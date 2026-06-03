@@ -22,6 +22,7 @@
     <modules>
         <module>solvia-domain</module>
         <module>solvia-application</module>
+        <module>solvia-infrastructure-persistence</module>
         <module>solvia-backend</module>
         <module>solvia-desktop</module>
     </modules>
