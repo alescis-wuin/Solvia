@@ -9,7 +9,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - solvia-postgres-data:/var/lib/postgresql/data
+      - solvia-postgres-18-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U solvia -d solvia"]
       interval: 10s
@@ -17,4 +17,4 @@ services:
       retries: 5
 
 volumes:
-  solvia-postgres-data:
+  solvia-postgres-18-data:
