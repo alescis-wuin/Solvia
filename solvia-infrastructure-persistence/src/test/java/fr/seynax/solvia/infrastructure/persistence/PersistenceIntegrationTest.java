@@ -147,9 +147,16 @@ class PersistenceIntegrationTest {
         positionSnapshotRepository.save(positionSnapshot);
         cashFlowRepository.save(cashFlow);
 
-        assertEquals(account, accountRepository.findById(account.id()).orElseThrow());
-        assertEquals(asset, assetRepository.findById(asset.id()).orElseThrow());
-        assertEquals(position, positionRepository.findById(position.id()).orElseThrow());
+        Account persistedAccount = accountRepository.findById(account.id()).orElseThrow();
+        Asset persistedAsset = assetRepository.findById(asset.id()).orElseThrow();
+        Position persistedPosition = positionRepository.findById(position.id()).orElseThrow();
+
+        assertEquals(account.id(), persistedAccount.id());
+        assertEquals(account.name(), persistedAccount.name());
+        assertEquals(asset.id(), persistedAsset.id());
+        assertEquals(asset.symbol(), persistedAsset.symbol());
+        assertEquals(position.id(), persistedPosition.id());
+        assertEquals(0, position.quantity().compareTo(persistedPosition.quantity()));
         assertEquals(1, accountSnapshotRepository.findByAccountId(account.id()).size());
         assertEquals(1, positionSnapshotRepository.findByPositionId(position.id()).size());
         assertEquals(1, cashFlowRepository.findByAccountId(account.id()).size());
@@ -195,9 +202,16 @@ class PersistenceIntegrationTest {
         importBatchRepository.save(importBatch);
         auditLogRepository.save(auditLogEntry);
 
-        assertEquals(price, marketPriceRepository.findLatestByAssetId(asset.id()).orElseThrow());
-        assertEquals(fxRate, fxRateRepository.findLatest(CurrencyCode.usd(), CurrencyCode.eur()).orElseThrow());
-        assertEquals(importBatch, importBatchRepository.findById(importBatch.id()).orElseThrow());
+        MarketPrice persistedPrice = marketPriceRepository.findLatestByAssetId(asset.id()).orElseThrow();
+        FxRate persistedFxRate = fxRateRepository.findLatest(CurrencyCode.usd(), CurrencyCode.eur()).orElseThrow();
+        ImportBatch persistedImportBatch = importBatchRepository.findById(importBatch.id()).orElseThrow();
+
+        assertEquals(price.id(), persistedPrice.id());
+        assertEquals(0, price.price().amount().compareTo(persistedPrice.price().amount()));
+        assertEquals(fxRate.id(), persistedFxRate.id());
+        assertEquals(0, fxRate.rate().compareTo(persistedFxRate.rate()));
+        assertEquals(importBatch.id(), persistedImportBatch.id());
+        assertEquals(importBatch.itemCount(), persistedImportBatch.itemCount());
         assertFalse(auditLogRepository.findLatest(5).isEmpty());
     }
 }

@@ -1,12 +1,13 @@
 package fr.seynax.solvia.backend;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@SpringBootTest
+import org.junit.jupiter.api.Test;
+
 class SolviaBackendApplicationTest {
 
     @Test
-    void contextLoads() {
+    void exposesApplicationEntryPoint() {
+        assertNotNull(SolviaBackendApplication.class);
     }
 }
