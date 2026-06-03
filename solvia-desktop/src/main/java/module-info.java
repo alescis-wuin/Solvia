@@ -8,4 +8,7 @@ module fr.seynax.solvia.desktop {
     exports fr.seynax.solvia.desktop;
     exports fr.seynax.solvia.desktop.api;
     exports fr.seynax.solvia.desktop.ui;
+
+    opens fr.seynax.solvia.desktop.api to com.fasterxml.jackson.databind;
+    opens fr.seynax.solvia.desktop.ui to javafx.base;
 }
