@@ -3,6 +3,7 @@ module fr.seynax.solvia.desktop {
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.datatype.jsr310;
+    requires javafx.base;
     requires javafx.controls;
 
     exports fr.seynax.solvia.desktop;
