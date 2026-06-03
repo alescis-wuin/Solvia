@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountCreateDto;
@@ -32,11 +33,13 @@ public final class SolviaApiClient {
     public SolviaApiClient(URI baseUri) {
         this.baseUri = baseUri;
         this.httpClient = HttpClient.newHttpClient();
-        this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        this.objectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     public CompletableFuture<List<AccountDto>> accounts() {
-        return get("/api/accounts", new TypeReference<>() {
+        return get("/api/accounts", new TypeReference<List<AccountDto>>() {
         });
     }
 
@@ -62,7 +65,7 @@ public final class SolviaApiClient {
                 + "&bucket=" + encode(bucket)
                 + "&aggregation=" + encode(aggregation)
                 + "&currency=" + encode(currency);
-        return get(path, new TypeReference<>() {
+        return get(path, new TypeReference<List<SeriesPointDto>>() {
         });
     }
 
