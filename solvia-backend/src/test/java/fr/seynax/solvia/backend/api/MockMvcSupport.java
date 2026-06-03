@@ -1,5 +1,6 @@
 package fr.seynax.solvia.backend.api;
 
+import org.springframework.http.converter.ResourceHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -22,7 +23,10 @@ public final class MockMvcSupport {
         return MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ApiExceptionHandler())
                 .setValidator(validator)
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper()))
+                .setMessageConverters(
+                        new ResourceHttpMessageConverter(),
+                        new MappingJackson2HttpMessageConverter(objectMapper())
+                )
                 .build();
     }
 
