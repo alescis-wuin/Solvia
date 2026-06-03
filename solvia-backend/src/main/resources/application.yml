@@ -1,0 +1,13 @@
+server:
+  address: 127.0.0.1
+  port: 8080
+
+spring:
+  application:
+    name: solvia-backend
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
