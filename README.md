@@ -40,7 +40,7 @@ market data.
 | --- | --- |
 | Language | Java 25 |
 | Backend | Spring Boot 4 |
-| Desktop | JavaFX |
+| Desktop | JavaFX + AtlantaFX |
 | Database | PostgreSQL |
 | Migrations | Flyway |
 | Persistence access | Spring JDBC `JdbcClient` |
@@ -70,13 +70,30 @@ Solvia/
 mvn clean verify
 ```
 
+## Run PostgreSQL
+
+```bash
+docker compose up -d postgres
+```
+
+Default local credentials are development-only and must not be reused outside local
+developer machines.
+
 ## Run backend
 
 ```bash
-mvn -pl solvia-backend spring-boot:run
+mvn -pl solvia-backend -am spring-boot:run
 ```
 
-The backend binds to `127.0.0.1` by default.
+The `-am` flag is required when launching from the root workspace because the
+backend depends on sibling reactor modules. The backend binds to `127.0.0.1` by
+default.
+
+Equivalent helper:
+
+```bash
+./scripts/run-backend.sh
+```
 
 ## API endpoints
 
@@ -106,20 +123,21 @@ GET    /api/positions/{positionId}/snapshots
 POST   /api/cash-flows
 GET    /api/accounts/{accountId}/cash-flows
 
+GET    /api/net-worth
+GET    /api/net-worth/series
+GET    /api/performance
+GET    /api/allocation
 GET    /api/openapi.yaml
 ```
 
 ## Run desktop shell
 
 ```bash
-mvn -pl solvia-desktop javafx:run
+mvn -pl solvia-desktop -am javafx:run
 ```
 
-## Local PostgreSQL
+Equivalent helper:
 
 ```bash
-docker compose up -d postgres
+./scripts/run-desktop.sh
 ```
-
-Default local credentials are development-only and must not be reused outside local
-developer machines.
