@@ -11,6 +11,8 @@ spring:
     password: ${SOLVIA_DATASOURCE_PASSWORD:solvia-local}
   flyway:
     enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
 
 management:
   endpoints:
