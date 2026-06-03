@@ -10,12 +10,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import fr.seynax.solvia.backend.api.common.ApiExceptionHandler;
 
-final class MockMvcSupport {
+public final class MockMvcSupport {
 
     private MockMvcSupport() {
     }
 
-    static MockMvc standaloneMvc(Object controller) {
+    public static MockMvc standaloneMvc(Object controller) {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
@@ -26,7 +26,7 @@ final class MockMvcSupport {
                 .build();
     }
 
-    static ObjectMapper objectMapper() {
+    public static ObjectMapper objectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         return objectMapper;
