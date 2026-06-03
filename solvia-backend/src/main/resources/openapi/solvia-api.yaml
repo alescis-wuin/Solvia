@@ -1,0 +1,433 @@
+openapi: 3.1.0
+info:
+  title: Solvia API
+  version: 0.1.0
+  description: Local-first wealth tracking API for manual V1 data entry.
+servers:
+  - url: http://127.0.0.1:8080
+paths:
+  /api/readiness:
+    get:
+      summary: Check backend readiness
+      responses:
+        '200':
+          description: Backend is ready
+  /api/accounts:
+    get:
+      summary: List accounts
+      responses:
+        '200':
+          description: Accounts returned
+    post:
+      summary: Create an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountCreateRequest'
+      responses:
+        '201':
+          description: Account created
+        '400':
+          description: Invalid request
+  /api/accounts/{id}:
+    get:
+      summary: Get account by id
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Account returned
+        '404':
+          description: Account not found
+    put:
+      summary: Update an account
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountUpdateRequest'
+      responses:
+        '200':
+          description: Account updated
+        '400':
+          description: Invalid request
+        '404':
+          description: Account not found
+    delete:
+      summary: Deactivate an account
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Account deactivated
+        '404':
+          description: Account not found
+  /api/assets:
+    get:
+      summary: List assets
+      responses:
+        '200':
+          description: Assets returned
+    post:
+      summary: Create an asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetCreateRequest'
+      responses:
+        '201':
+          description: Asset created
+        '400':
+          description: Invalid request
+  /api/assets/{id}:
+    get:
+      summary: Get asset by id
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Asset returned
+        '404':
+          description: Asset not found
+    put:
+      summary: Update an asset
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetUpdateRequest'
+      responses:
+        '200':
+          description: Asset updated
+        '400':
+          description: Invalid request
+        '404':
+          description: Asset not found
+    delete:
+      summary: Deactivate an asset
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Asset deactivated
+        '404':
+          description: Asset not found
+  /api/accounts/{accountId}/positions:
+    get:
+      summary: List positions for an account
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Positions returned
+        '404':
+          description: Account not found
+  /api/positions:
+    post:
+      summary: Create a position
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionCreateRequest'
+      responses:
+        '201':
+          description: Position created
+        '400':
+          description: Invalid request
+        '404':
+          description: Account or asset not found
+  /api/positions/{id}:
+    get:
+      summary: Get position by id
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Position returned
+        '404':
+          description: Position not found
+    put:
+      summary: Update a position
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionUpdateRequest'
+      responses:
+        '200':
+          description: Position updated
+        '400':
+          description: Invalid request
+        '404':
+          description: Position not found
+    delete:
+      summary: Deactivate a position
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Position deactivated
+        '404':
+          description: Position not found
+  /api/account-snapshots:
+    post:
+      summary: Create an account balance snapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountSnapshotCreateRequest'
+      responses:
+        '201':
+          description: Snapshot created
+        '400':
+          description: Invalid request
+        '404':
+          description: Account not found
+  /api/accounts/{accountId}/snapshots:
+    get:
+      summary: List account snapshots
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Snapshots returned
+        '404':
+          description: Account not found
+  /api/position-snapshots:
+    post:
+      summary: Create a position snapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionSnapshotCreateRequest'
+      responses:
+        '201':
+          description: Snapshot created
+        '400':
+          description: Invalid request
+        '404':
+          description: Position not found
+  /api/positions/{positionId}/snapshots:
+    get:
+      summary: List position snapshots
+      parameters:
+        - $ref: '#/components/parameters/PositionId'
+      responses:
+        '200':
+          description: Snapshots returned
+        '404':
+          description: Position not found
+  /api/cash-flows:
+    post:
+      summary: Create a cash flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashFlowCreateRequest'
+      responses:
+        '201':
+          description: Cash flow created
+        '400':
+          description: Invalid request
+        '404':
+          description: Account not found
+  /api/accounts/{accountId}/cash-flows:
+    get:
+      summary: List account cash flows
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Cash flows returned
+        '404':
+          description: Account not found
+  /api/openapi.yaml:
+    get:
+      summary: Return this OpenAPI contract
+      responses:
+        '200':
+          description: YAML contract returned
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PositionId:
+      name: positionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    MoneyRequest:
+      type: object
+      required: [amount, currencyCode]
+      properties:
+        amount:
+          type: number
+        currencyCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          example: EUR
+    AccountCreateRequest:
+      type: object
+      required: [name, type, envelopeType, currencyCode]
+      properties:
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/AccountType'
+        envelopeType:
+          $ref: '#/components/schemas/EnvelopeType'
+        currencyCode:
+          type: string
+          example: EUR
+    AccountUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/AccountCreateRequest'
+        - type: object
+          required: [active]
+          properties:
+            active:
+              type: boolean
+    AssetCreateRequest:
+      type: object
+      required: [name, type, currencyCode]
+      properties:
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/AssetType'
+        currencyCode:
+          type: string
+          example: EUR
+        symbol:
+          type: string
+    AssetUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/AssetCreateRequest'
+        - type: object
+          required: [active]
+          properties:
+            active:
+              type: boolean
+    PositionCreateRequest:
+      type: object
+      required: [accountId, assetId, quantity]
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+          minimum: 0
+    PositionUpdateRequest:
+      type: object
+      required: [quantity, active]
+      properties:
+        quantity:
+          type: number
+          minimum: 0
+        active:
+          type: boolean
+    AccountSnapshotCreateRequest:
+      type: object
+      required: [accountId, valueDate, balance]
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        valueDate:
+          type: string
+          format: date
+        balance:
+          $ref: '#/components/schemas/MoneyRequest'
+        confidence:
+          $ref: '#/components/schemas/ValuationConfidence'
+        note:
+          type: string
+    PositionSnapshotCreateRequest:
+      type: object
+      required: [positionId, valueDate, quantity, marketValue]
+      properties:
+        positionId:
+          type: string
+          format: uuid
+        valueDate:
+          type: string
+          format: date
+        quantity:
+          type: number
+          minimum: 0
+        marketValue:
+          $ref: '#/components/schemas/MoneyRequest'
+        confidence:
+          $ref: '#/components/schemas/ValuationConfidence'
+    CashFlowCreateRequest:
+      type: object
+      required: [accountId, type, valueDate, amount]
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/CashFlowType'
+        valueDate:
+          type: string
+          format: date
+        amount:
+          $ref: '#/components/schemas/MoneyRequest'
+        label:
+          type: string
+    AccountType:
+      type: string
+      enum: [CHECKING, SAVINGS, INVESTMENT, PEA, CTO, CRYPTO_EXCHANGE, CRYPTO_WALLET, CASHBACK, OTHER]
+    EnvelopeType:
+      type: string
+      enum: [CURRENT_ACCOUNT, REGULATED_SAVINGS, PEA, CTO, CRYPTO, PRIVATE_ASSET, CASHBACK, OTHER]
+    AssetType:
+      type: string
+      enum: [FIAT_CURRENCY, STOCK, ETF, BOND, CRYPTO_ASSET, PRIVATE_EQUITY, REAL_ESTATE, CASHBACK_REWARD, OTHER]
+    CashFlowType:
+      type: string
+      enum: [DEPOSIT, WITHDRAWAL, TRANSFER_IN, TRANSFER_OUT, INTEREST, DIVIDEND, FEE, TAX, CASHBACK, CORRECTION]
+    ValuationConfidence:
+      type: string
+      enum: [OBSERVED, ESTIMATED_HIGH, ESTIMATED_MEDIUM, ESTIMATED_LOW]
