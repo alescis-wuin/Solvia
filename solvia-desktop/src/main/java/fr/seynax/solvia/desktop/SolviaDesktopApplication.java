@@ -11,6 +11,7 @@ import fr.seynax.solvia.desktop.ui.AccountsView;
 import fr.seynax.solvia.desktop.ui.DashboardView;
 import fr.seynax.solvia.desktop.ui.EntriesView;
 import fr.seynax.solvia.desktop.ui.SolviaShell;
+import fr.seynax.solvia.desktop.ui.ThemeSupport;
 
 public class SolviaDesktopApplication extends Application {
 
@@ -26,10 +27,15 @@ public class SolviaDesktopApplication extends Application {
         shell.addPage("Dashboard", dashboardView);
         shell.addPage("Accounts", accountsView);
         shell.addPage("Data entry", entriesView);
-        shell.setStatus("Start the backend with: mvn -pl solvia-backend spring-boot:run");
+        shell.setStatus("Start the backend with: mvn -pl solvia-backend -am spring-boot:run");
+
+        Scene scene = new Scene(shell, 1220, 800);
+        ThemeSupport.install(scene);
 
         stage.setTitle("Solvia");
-        stage.setScene(new Scene(shell, 1180, 760));
+        stage.setMinWidth(1100);
+        stage.setMinHeight(720);
+        stage.setScene(scene);
         stage.show();
     }
 
