@@ -31,18 +31,22 @@ public final class DashboardView extends VBox {
     private boolean loadedOnce;
 
     public DashboardView(SolviaApiClient apiClient) {
-        this(apiClient, null, null, null, null);
+        this(apiClient, null, null, null, null, null);
     }
 
     public DashboardView(SolviaApiClient apiClient, Runnable openDataEntry, Runnable openAccounts) {
-        this(apiClient, null, openDataEntry, openAccounts, null);
+        this(apiClient, null, openDataEntry, openAccounts, null, null);
     }
 
     public DashboardView(SolviaApiClient apiClient, Runnable openDataEntry, Runnable openAccounts, Runnable openAssets) {
-        this(apiClient, null, openDataEntry, openAccounts, openAssets);
+        this(apiClient, null, openDataEntry, openAccounts, openAssets, null);
     }
 
     public DashboardView(SolviaApiClient apiClient, DesktopEventBus eventBus, Runnable openDataEntry, Runnable openAccounts, Runnable openAssets) {
+        this(apiClient, eventBus, openDataEntry, openAccounts, openAssets, null);
+    }
+
+    public DashboardView(SolviaApiClient apiClient, DesktopEventBus eventBus, Runnable openDataEntry, Runnable openAccounts, Runnable openAssets, Runnable openSystem) {
         this.apiClient = apiClient;
         getStyleClass().add("content-view");
         setSpacing(18);
@@ -52,9 +56,10 @@ public final class DashboardView extends VBox {
         quickLinks.onDataEntry(openDataEntry);
         quickLinks.onAccounts(openAccounts);
         quickLinks.onAssets(openAssets);
-        getChildren().addAll(filters, quickLinks, metrics, state, dashboardBody());
+        quickLinks.onSystem(openSystem);
+        getChildren().addAll(topRow(), metrics, state, dashboardBody());
         VBox.setVgrow(chart, Priority.ALWAYS);
-        showWaitingState("Verification du backend local...");
+        showWaitingState("Vérification du backend local...");
     }
 
     public void backendStatusChanged(BackendStatusSnapshot snapshot) {
@@ -62,7 +67,7 @@ public final class DashboardView extends VBox {
         backendReady = snapshot.canLoadData();
         if (snapshot.state() == BackendConnectionState.CHECKING) {
             if (!loadedOnce) {
-                showWaitingState("Verification du backend local...");
+                showWaitingState("Vérification du backend local...");
             }
             return;
         }
@@ -80,13 +85,13 @@ public final class DashboardView extends VBox {
 
     public void refresh() {
         if (!backendReady) {
-            showUnavailableState("Backend local non pret.");
+            showUnavailableState("Backend local non prêt.");
             return;
         }
         LocalDate start = filters.from();
         LocalDate end = filters.to();
         if (start == null || end == null || start.isAfter(end)) {
-            showErrorState("Periode invalide. La date de debut doit etre avant ou egale a la date de fin.");
+            showErrorState("Période invalide. La date de début doit être avant ou égale à la date de fin.");
             return;
         }
         showLoadingState();
@@ -100,6 +105,12 @@ public final class DashboardView extends VBox {
                     }
                     update(payload);
                 }));
+    }
+
+    private HBox topRow() {
+        HBox row = Ui.style(new HBox(16, filters, quickLinks), "dashboard-top-row");
+        HBox.setHgrow(filters, Priority.ALWAYS);
+        return row;
     }
 
     private HBox dashboardBody() {
@@ -117,11 +128,11 @@ public final class DashboardView extends VBox {
         allocation.update(netWorth.allocation());
         accounts.update(netWorth.accounts());
         if (hasNoValuedData(netWorth)) {
-            state.show("Aucune donnee patrimoniale", "Ajoute un compte puis une valeur de compte ou de position pour alimenter le dashboard.", "state-warning");
+            state.show("Aucune donnée patrimoniale", "Ajoute un compte puis une valeur de compte ou de position pour alimenter le dashboard.", "state-warning");
         } else if (payload.series().isEmpty()) {
-            state.show("Aucune serie", "Aucune valeur n'est disponible sur la periode selectionnee.", "state-warning");
+            state.show("Aucune série", "Aucune valeur n'est disponible sur la période sélectionnée.", "state-warning");
         } else {
-            state.show("Dashboard actualise", "Periode " + DesktopFormatters.period(filters.from(), filters.to()) + ".", "state-success");
+            state.hide();
         }
         loadedOnce = true;
         filters.setRefreshDisabled(false);
@@ -140,13 +151,13 @@ public final class DashboardView extends VBox {
     private void showWaitingState(String text) {
         filters.setRefreshDisabled(true);
         quickLinks.setRefreshDisabled(true);
-        state.show("Verification", text, "state-info");
+        state.show("Vérification", text, "state-info");
     }
 
     private void showLoadingState() {
         filters.setRefreshDisabled(true);
         quickLinks.setRefreshDisabled(true);
-        state.show("Chargement", "Chargement des donnees patrimoniales...", "state-info");
+        state.hide();
     }
 
     private void showUnavailableState(String text) {
@@ -157,7 +168,7 @@ public final class DashboardView extends VBox {
         quality.clear();
         allocation.clear();
         accounts.clear();
-        state.show("Backend non pret", text, "state-warning");
+        state.show("Backend non prêt", text, "state-warning");
     }
 
     private void showErrorState(String text) {
