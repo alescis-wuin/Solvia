@@ -7,6 +7,7 @@ import javafx.stage.Stage;
 import fr.seynax.solvia.desktop.api.BackendStatusSnapshot;
 import fr.seynax.solvia.desktop.api.SolviaApiClient;
 import fr.seynax.solvia.desktop.ui.AccountsView;
+import fr.seynax.solvia.desktop.ui.AssetsPositionsView;
 import fr.seynax.solvia.desktop.ui.BackendStatusBanner;
 import fr.seynax.solvia.desktop.ui.DashboardView;
 import fr.seynax.solvia.desktop.ui.EntriesView;
@@ -25,20 +26,23 @@ public class SolviaDesktopApplication extends Application {
 
         AccountsView accountsView = new AccountsView(apiClient);
         EntriesView entriesView = new EntriesView(apiClient);
+        AssetsPositionsView assetsPositionsView = new AssetsPositionsView(apiClient);
         DashboardView dashboardView = new DashboardView(
                 apiClient,
                 () -> shell.showPage("Saisie"),
-                () -> shell.showPage("Comptes")
+                () -> shell.showPage("Comptes"),
+                () -> shell.showPage("Actifs & positions")
         );
 
         backendStatusBanner = new BackendStatusBanner(apiClient, preferences, status -> {
-            propagateStatus(status, dashboardView, accountsView, entriesView);
+            propagateStatus(status, dashboardView, accountsView, entriesView, assetsPositionsView);
             shell.setStatus(status.message());
         });
         shell.setBackendStatusBanner(backendStatusBanner);
 
         shell.addPage("Dashboard", dashboardView);
         shell.addPage("Comptes", accountsView);
+        shell.addPage("Actifs & positions", assetsPositionsView);
         shell.addPage("Saisie", entriesView);
         shell.setStatus("Start the backend with: mvn -pl solvia-backend -am spring-boot:run");
 
@@ -58,11 +62,13 @@ public class SolviaDesktopApplication extends Application {
             BackendStatusSnapshot status,
             DashboardView dashboardView,
             AccountsView accountsView,
-            EntriesView entriesView
+            EntriesView entriesView,
+            AssetsPositionsView assetsPositionsView
     ) {
         dashboardView.backendStatusChanged(status);
         accountsView.backendStatusChanged(status);
         entriesView.backendStatusChanged(status);
+        assetsPositionsView.backendStatusChanged(status);
     }
 
     public static void main(String[] args) {
