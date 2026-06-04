@@ -19,11 +19,13 @@ import fr.seynax.solvia.desktop.api.ApiDtos.MoneyDto;
 import fr.seynax.solvia.desktop.api.BackendConnectionState;
 import fr.seynax.solvia.desktop.api.BackendStatusSnapshot;
 import fr.seynax.solvia.desktop.api.SolviaApiClient;
+import fr.seynax.solvia.desktop.ui.InputValidation.ValidationResult;
 
 public final class EntriesView extends VBox {
 
     private final SolviaApiClient apiClient;
     private final StateMessage state = new StateMessage();
+    private final EmptyState empty = new EmptyState();
     private final ComboBox<AccountDto> snapshotAccount = Ui.tooltip(new ComboBox<>(), "Compte concerne par la valeur observee.");
     private final DatePicker snapshotDate = Ui.tooltip(new DatePicker(LocalDate.now()), "Date de valorisation observee.");
     private final TextField snapshotAmount = Ui.tooltip(new TextField(), "Montant total observe pour le compte.");
@@ -45,7 +47,7 @@ public final class EntriesView extends VBox {
         setPadding(new Insets(20));
         flowType.getItems().setAll("DEPOSIT", "WITHDRAWAL", "TRANSFER_IN", "TRANSFER_OUT", "INTEREST", "DIVIDEND", "FEE", "TAX", "CASHBACK", "CORRECTION");
         flowType.setValue("DEPOSIT");
-        getChildren().addAll(snapshotForm(), flowForm(), state);
+        getChildren().addAll(snapshotForm(), flowForm(), state, empty);
         setInputsDisabled(true);
         state.show("Verification", "Verification du backend local...", "state-info");
     }
@@ -61,6 +63,7 @@ public final class EntriesView extends VBox {
             setInputsDisabled(true);
             snapshotAccount.getItems().clear();
             flowAccount.getItems().clear();
+            empty.show("Backend indisponible", "La saisie sera disponible quand le backend local sera connecte.");
             state.show("Backend non pret", snapshot.message(), "state-warning");
             return;
         }
@@ -73,6 +76,7 @@ public final class EntriesView extends VBox {
             state.show("Backend non pret", "Backend local non pret.", "state-warning");
             return;
         }
+        empty.hide();
         state.show("Chargement", "Chargement des comptes...", "state-info");
         apiClient.accounts().whenComplete((accounts, error) -> Platform.runLater(() -> {
             if (error != null) {
@@ -85,11 +89,13 @@ public final class EntriesView extends VBox {
                 snapshotAccount.setValue(accounts.get(0));
                 flowAccount.setValue(accounts.get(0));
             }
-            state.show(
-                    accounts.isEmpty() ? "Aucun compte" : "Comptes charges",
-                    accounts.isEmpty() ? "Creer un compte avant de saisir un snapshot ou un flux." : "Comptes charges: " + accounts.size(),
-                    accounts.isEmpty() ? "state-warning" : "state-success"
-            );
+            if (accounts.isEmpty()) {
+                empty.show("Aucun compte", "Cree un compte avant de saisir un snapshot ou un flux.");
+                state.show("Aucun compte", "La saisie necessite au moins un compte.", "state-warning");
+            } else {
+                empty.hide();
+                state.show("Comptes charges", "Comptes charges: " + accounts.size(), "state-success");
+            }
         }));
     }
 
@@ -141,14 +147,21 @@ public final class EntriesView extends VBox {
             state.show("Compte requis", "Selectionner un compte avant la saisie.", "state-warning");
             return;
         }
-        BigDecimal amount = parseAmount(snapshotAmount.getText());
-        if (amount == null) {
+        ValidationResult<BigDecimal> amount = InputValidation.amount(snapshotAmount.getText(), "Montant du snapshot");
+        if (!amount.valid()) {
+            state.show("Montant invalide", amount.message(), "state-warning");
             return;
         }
+        ValidationResult<String> currency = InputValidation.currencyCode(snapshotCurrency.getText(), "Devise du snapshot");
+        if (!currency.valid()) {
+            state.show("Devise invalide", currency.message(), "state-warning");
+            return;
+        }
+        snapshotCurrency.setText(currency.value());
         AccountSnapshotCreateDto request = new AccountSnapshotCreateDto(
                 account.id(),
                 snapshotDate.getValue(),
-                new MoneyDto(amount, snapshotCurrency.getText()),
+                new MoneyDto(amount.value(), currency.value()),
                 "OBSERVED",
                 null
         );
@@ -175,15 +188,22 @@ public final class EntriesView extends VBox {
             state.show("Compte requis", "Selectionner un compte avant la saisie.", "state-warning");
             return;
         }
-        BigDecimal amount = parseAmount(flowAmount.getText());
-        if (amount == null) {
+        ValidationResult<BigDecimal> amount = InputValidation.amount(flowAmount.getText(), "Montant du flux");
+        if (!amount.valid()) {
+            state.show("Montant invalide", amount.message(), "state-warning");
             return;
         }
+        ValidationResult<String> currency = InputValidation.currencyCode(flowCurrency.getText(), "Devise du flux");
+        if (!currency.valid()) {
+            state.show("Devise invalide", currency.message(), "state-warning");
+            return;
+        }
+        flowCurrency.setText(currency.value());
         CashFlowCreateDto request = new CashFlowCreateDto(
                 account.id(),
                 flowType.getValue(),
                 flowDate.getValue(),
-                new MoneyDto(amount, flowCurrency.getText()),
+                new MoneyDto(amount.value(), currency.value()),
                 flowLabel.getText()
         );
         saveFlow.setDisable(true);
@@ -198,15 +218,6 @@ public final class EntriesView extends VBox {
             flowLabel.clear();
             state.show("Flux enregistre", "Le flux financier a ete ajoute.", "state-success");
         }));
-    }
-
-    private BigDecimal parseAmount(String text) {
-        try {
-            return new BigDecimal(text.strip().replace(',', '.'));
-        } catch (RuntimeException exception) {
-            state.show("Montant invalide", "Exemple attendu: 1234.56", "state-warning");
-            return null;
-        }
     }
 
     private void setInputsDisabled(boolean disabled) {
