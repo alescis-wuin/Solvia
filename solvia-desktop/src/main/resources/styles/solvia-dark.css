@@ -16,16 +16,28 @@
 .label { -fx-text-fill: -solvia-text; }
 .app-title { -fx-font-size: 26px; -fx-font-weight: 800; -fx-text-fill: -solvia-accent; }
 .screen-title { -fx-font-size: 24px; -fx-font-weight: 800; }
+.section-title { -fx-font-size: 18px; -fx-font-weight: 800; }
+.body-text { -fx-text-fill: -solvia-text; }
+.field-label { -fx-font-weight: 700; -fx-text-fill: -solvia-muted; }
 .solvia-shell, .content-view { -fx-background-color: -solvia-bg; }
-.header, .footer, .sidebar, .card, .form-card, .table-view, .chart {
+.header, .footer, .sidebar, .card, .form-card, .section-card, .metric-card, .state-message, .table-view, .chart {
     -fx-background-color: -solvia-surface;
     -fx-border-color: -solvia-border;
     -fx-border-width: 1px;
     -fx-background-radius: 14px;
     -fx-border-radius: 14px;
 }
-.header, .footer, .card, .form-card { -fx-padding: 18px; }
+.header, .footer, .card, .form-card, .section-card, .metric-card, .state-message { -fx-padding: 18px; }
 .sidebar { -fx-padding: 22px 14px; }
+.form-row, .metric-grid { -fx-alignment: center-left; }
+.metric-card { -fx-min-width: 220px; }
+.metric-title { -fx-text-fill: -solvia-muted; -fx-font-weight: 800; }
+.metric-caption { -fx-font-size: 13px; }
+.state-title { -fx-font-weight: 900; }
+.state-info { -fx-border-color: -solvia-info; }
+.state-success { -fx-border-color: -solvia-accent; }
+.state-warning { -fx-border-color: -solvia-warning; }
+.state-error { -fx-border-color: -solvia-danger; }
 .status-banner {
     -fx-background-color: -solvia-surface;
     -fx-border-color: -solvia-border;
@@ -75,7 +87,11 @@
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
 }
+.text-field:disabled, .combo-box:disabled, .date-picker:disabled, .button:disabled {
+    -fx-opacity: 0.68;
+}
 .table-row-cell { -fx-cell-size: 40px; }
+.table-view .column-header .label { -fx-font-weight: 800; }
 .chart-plot-background { -fx-background-color: #081827; }
 .tooltip {
     -fx-font-size: 14px;
