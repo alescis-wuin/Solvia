@@ -33,7 +33,12 @@ public final class ThemeSupport {
         Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
         loadFirstAvailable(LUCIOLE_CANDIDATES);
         loadFirstAvailable(HACK_CANDIDATES);
-        URL stylesheet = ThemeSupport.class.getResource("/styles/solvia-dark.css");
+        addStylesheet(scene, "/styles/solvia-dark.css");
+        addStylesheet(scene, "/styles/solvia-dashboard.css");
+    }
+
+    private static void addStylesheet(Scene scene, String resourcePath) {
+        URL stylesheet = ThemeSupport.class.getResource(resourcePath);
         if (stylesheet != null) {
             scene.getStylesheets().add(stylesheet.toExternalForm());
         }
