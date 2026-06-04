@@ -20,6 +20,10 @@ class OpenApiControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("openapi: 3.1.0")))
                 .andExpect(content().string(containsString("/api/accounts")))
-                .andExpect(content().string(containsString("/api/cash-flows")));
+                .andExpect(content().string(containsString("/api/cash-flows")))
+                .andExpect(content().string(containsString("/api/readiness")))
+                .andExpect(content().string(containsString("ReadinessResponse")))
+                .andExpect(content().string(containsString("databaseStatus")))
+                .andExpect(content().string(containsString("backendStatus")));
     }
 }
