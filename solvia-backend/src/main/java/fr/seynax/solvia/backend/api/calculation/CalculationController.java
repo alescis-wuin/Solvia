@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -153,7 +154,10 @@ public class CalculationController {
         }
     }
 
-    public record SeriesPointResponse(LocalDateTime valueDate, MoneyResponse value) {
+    public record SeriesPointResponse(
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime valueDate,
+            MoneyResponse value
+    ) {
         static SeriesPointResponse from(NetWorthTemporalSeriesPoint point) {
             return new SeriesPointResponse(point.valueDate(), MoneyResponse.from(point.value()));
         }
