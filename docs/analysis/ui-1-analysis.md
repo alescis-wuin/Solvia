@@ -16,7 +16,7 @@ The implemented user-facing states are:
 
 ## Backend changes
 
-`/api/readiness` now returns a structured response containing:
+`/api/readiness` returns a structured response containing:
 
 - global status;
 - service name;
@@ -40,6 +40,13 @@ Implemented desktop pieces:
 - `SolviaShell`: hosts the status banner;
 - `DashboardView`, `AccountsView`, `EntriesView`: disable loading/actions while backend is not ready.
 
+## Validation additions
+
+- The static OpenAPI contract now documents `ReadinessResponse` for `/api/readiness`.
+- `OpenApiControllerTest` checks that readiness fields are present in the contract.
+- `ReadinessControllerTest` covers `UP` and `DEGRADED` readiness states with mocked JDBC and migration dependencies.
+- The dashboard no longer reloads business data on every periodic readiness check; it reloads when the backend becomes ready or when no data has been loaded yet.
+
 ## UX decisions
 
 - The backend URL defaults to `http://127.0.0.1:8080`.
@@ -51,7 +58,5 @@ Implemented desktop pieces:
 ## Remaining work
 
 - Add JavaFX smoke tests.
-- Add generated OpenAPI or contract tests so `/api/readiness` and the static OpenAPI file cannot drift.
-- Avoid repeated business-data refreshes on every periodic readiness check; views should refresh automatically only on a disconnected-to-connected transition.
-- Add richer empty-state components rather than status labels only.
+- Add richer empty-state components where simple `StateMessage` is not enough.
 - Add an optional backend auto-start strategy after the desktop packaging phase.
