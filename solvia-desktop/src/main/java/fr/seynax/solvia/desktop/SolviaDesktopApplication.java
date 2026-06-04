@@ -14,6 +14,7 @@ import fr.seynax.solvia.desktop.ui.DesktopEventBus;
 import fr.seynax.solvia.desktop.ui.DesktopEventBus.EventType;
 import fr.seynax.solvia.desktop.ui.EntriesView;
 import fr.seynax.solvia.desktop.ui.SolviaShell;
+import fr.seynax.solvia.desktop.ui.SystemView;
 import fr.seynax.solvia.desktop.ui.ThemeSupport;
 
 public class SolviaDesktopApplication extends Application {
@@ -30,12 +31,17 @@ public class SolviaDesktopApplication extends Application {
         AccountsView accountsView = new AccountsView(apiClient);
         EntriesView entriesView = new EntriesView(apiClient);
         AssetsPositionsView assetsPositionsView = new AssetsPositionsView(apiClient);
+        backendStatusBanner = new BackendStatusBanner(apiClient, preferences, status -> {
+            propagateStatus(status, shell, null, accountsView, entriesView, assetsPositionsView);
+        });
+        SystemView systemView = new SystemView(backendStatusBanner);
         DashboardView dashboardView = new DashboardView(
                 apiClient,
                 eventBus,
                 () -> shell.showPage("Saisie"),
                 () -> shell.showPage("Comptes"),
-                () -> shell.showPage("Actifs & positions")
+                () -> shell.showPage("Actifs & positions"),
+                () -> shell.showPage("Système")
         );
 
         eventBus.subscribe(EventType.ACCOUNTS_CHANGED, () -> {
@@ -50,16 +56,11 @@ public class SolviaDesktopApplication extends Application {
         entriesView.setOnPortfolioDataChanged(() -> eventBus.publish(EventType.PORTFOLIO_DATA_CHANGED));
         assetsPositionsView.setOnPortfolioDataChanged(() -> eventBus.publish(EventType.PORTFOLIO_DATA_CHANGED));
 
-        backendStatusBanner = new BackendStatusBanner(apiClient, preferences, status -> {
-            propagateStatus(status, dashboardView, accountsView, entriesView, assetsPositionsView);
-            shell.setStatus(status.message());
-        });
-        shell.setBackendStatusBanner(backendStatusBanner);
-
         shell.addPage("Dashboard", dashboardView);
         shell.addPage("Comptes", accountsView);
         shell.addPage("Actifs & positions", assetsPositionsView);
         shell.addPage("Saisie", entriesView);
+        shell.addPage("Système", systemView);
         shell.setStatus("Start the backend with: mvn -pl solvia-backend -am spring-boot:run");
 
         Scene scene = new Scene(shell, 1220, 800);
@@ -76,15 +77,19 @@ public class SolviaDesktopApplication extends Application {
 
     private void propagateStatus(
             BackendStatusSnapshot status,
+            SolviaShell shell,
             DashboardView dashboardView,
             AccountsView accountsView,
             EntriesView entriesView,
             AssetsPositionsView assetsPositionsView
     ) {
-        dashboardView.backendStatusChanged(status);
+        if (dashboardView != null) {
+            dashboardView.backendStatusChanged(status);
+        }
         accountsView.backendStatusChanged(status);
         entriesView.backendStatusChanged(status);
         assetsPositionsView.backendStatusChanged(status);
+        shell.setStatus(status.message());
     }
 
     public static void main(String[] args) {
