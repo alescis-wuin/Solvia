@@ -1,5 +1,6 @@
 package fr.seynax.solvia.desktop.ui;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 
@@ -8,6 +9,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountValueDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.MoneyDto;
 
 public final class DashboardAccountsCard extends SectionCard {
 
@@ -49,20 +51,22 @@ public final class DashboardAccountsCard extends SectionCard {
     public static final class AccountRow {
         private final String name;
         private final String value;
-        private final java.math.BigDecimal sortKey;
+        private final BigDecimal sortKey;
 
-        private AccountRow(String name, String value, java.math.BigDecimal sortKey) {
+        private AccountRow(String name, String value, BigDecimal sortKey) {
             this.name = name;
             this.value = value;
-            this.sortKey = sortKey == null ? java.math.BigDecimal.ZERO : sortKey;
+            this.sortKey = sortKey == null ? BigDecimal.ZERO : sortKey;
         }
 
         static AccountRow from(AccountValueDto account) {
             String name = account.accountName() == null || account.accountName().isBlank() ? "Compte sans nom" : account.accountName();
-            return new AccountRow(name, DesktopFormatters.money(account.value()), account.value().amount());
+            MoneyDto value = account.value();
+            BigDecimal amount = value == null ? BigDecimal.ZERO : value.amount();
+            return new AccountRow(name, DesktopFormatters.money(value), amount);
         }
 
-        java.math.BigDecimal sortKey() {
+        BigDecimal sortKey() {
             return sortKey;
         }
 
