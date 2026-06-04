@@ -114,21 +114,37 @@
 .icon-button, .hamburger-menu {
     -fx-min-width: 52px;
     -fx-pref-width: 52px;
-    -fx-font-size: 22px;
+    -fx-min-height: 52px;
+    -fx-pref-height: 52px;
+    -fx-padding: 0;
     -fx-border-color: -solvia-border;
     -fx-border-width: 1px;
 }
 .hamburger-menu {
     -fx-background-color: -solvia-raised;
-    -fx-text-fill: -solvia-accent;
+}
+.hamburger-menu:hover {
+    -fx-border-color: -solvia-accent;
 }
 .menu-icon {
     -fx-fill: -solvia-accent;
-    -fx-scale-x: 0.9;
-    -fx-scale-y: 0.9;
+    -fx-scale-x: 0.92;
+    -fx-scale-y: 0.92;
 }
-.icon-entry { -fx-content: "M3 4h18v3H3z M3 10h18v3H3z M3 16h12v3H3z"; }
-.icon-assets { -fx-content: "M12 2l9 5v10l-9 5-9-5V7z M12 5L6 8.4v7.2l6 3.4 6-3.4V8.4z"; }
-.icon-accounts { -fx-content: "M4 5h16v4H4z M4 11h16v8H4z M7 14h4v2H7z"; }
-.icon-system { -fx-content: "M12 8a4 4 0 100 8 4 4 0 000-8z M12 2l2 3 4 .5-.8 3.7 2.8 2.8-2.8 2.8.8 3.7-4 .5-2 3-2-3-4-.5.8-3.7L3 12l2.8-2.8L5 5.5 9 5z"; }
-.icon-refresh { -fx-content: "M17.7 6.3A8 8 0 104 12h2a6 6 0 119.9 4.6L13 14h8V6z"; }
+.context-menu {
+    -fx-background-color: -solvia-surface;
+    -fx-border-color: -solvia-border;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 8px;
+}
+.menu-item {
+    -fx-padding: 9px 14px;
+}
+.menu-item .label {
+    -fx-text-fill: -solvia-text;
+    -fx-font-weight: 800;
+}
+.menu-item:focused {
+    -fx-background-color: -solvia-raised;
+}
