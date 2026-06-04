@@ -42,6 +42,9 @@ public final class ApiDtos {
     public record AccountCreateDto(String name, String type, String envelopeType, String currencyCode) {
     }
 
+    public record AccountUpdateDto(String name, String type, String envelopeType, String currencyCode, boolean active) {
+    }
+
     public record AssetDto(
             UUID id,
             String name,
@@ -89,6 +92,17 @@ public final class ApiDtos {
     ) {
     }
 
+    public record AccountSnapshotDto(
+            UUID id,
+            UUID accountId,
+            LocalDate valueDate,
+            MoneyDto balance,
+            String confidence,
+            String note,
+            Instant recordedAt
+    ) {
+    }
+
     public record PositionSnapshotCreateDto(
             UUID positionId,
             LocalDate valueDate,
@@ -115,6 +129,17 @@ public final class ApiDtos {
             LocalDate valueDate,
             MoneyDto amount,
             String label
+    ) {
+    }
+
+    public record CashFlowDto(
+            UUID id,
+            UUID accountId,
+            String type,
+            LocalDate valueDate,
+            MoneyDto amount,
+            String label,
+            Instant recordedAt
     ) {
     }
 
