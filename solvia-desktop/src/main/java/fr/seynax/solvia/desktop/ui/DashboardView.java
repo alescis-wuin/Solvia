@@ -82,7 +82,7 @@ public final class DashboardView extends VBox {
 
     private void update(DashboardPayload payload) {
         metrics.update(payload.data().netWorth(), payload.data().performance());
-        chart.update(filters.from(), payload.series());
+        chart.update(payload.series());
         allocation.update(payload.data().netWorth().allocation());
         if (payload.series().isEmpty()) {
             state.show("Aucune donnee", "Aucune valeur n'est disponible sur la periode.", "state-warning");
