@@ -42,7 +42,7 @@ public final class DashboardTimeStepSelector extends VBox {
         return selector.getValue();
     }
 
-    public void setDisabled(boolean disabled) {
+    public void setSelectorDisabled(boolean disabled) {
         selector.setDisable(disabled);
     }
 
