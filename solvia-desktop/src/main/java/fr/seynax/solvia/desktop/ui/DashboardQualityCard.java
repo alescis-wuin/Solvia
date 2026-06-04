@@ -13,43 +13,33 @@ public final class DashboardQualityCard extends SectionCard {
     private final Label period = Ui.label("--", "monospace");
     private final Label valuationDate = Ui.label("--", "monospace");
     private final Label seriesPoints = Ui.label("--", "monospace");
-    private final Label valuedAccounts = Ui.label("--", "monospace");
-    private final Label allocationRows = Ui.label("--", "monospace");
     private final Label chartMode = Ui.label("--", "monospace");
 
     public DashboardQualityCard() {
-        super("Qualite des donnees", "Controle rapide de la periode, de la fraicheur et de la densite des donnees affichees.");
+        super("Lecture", "Période, valorisation et granularité.");
         GridPane grid = Ui.style(new GridPane(), "dashboard-quality-grid");
         grid.setHgap(18);
         grid.setVgap(8);
-        addRow(grid, 0, "Periode", period);
+        addRow(grid, 0, "Période", period);
         addRow(grid, 1, "Valorisation", valuationDate);
         addRow(grid, 2, "Points", seriesPoints);
-        addRow(grid, 3, "Comptes valorises", valuedAccounts);
-        addRow(grid, 4, "Classes d'actifs", allocationRows);
-        addRow(grid, 5, "Lecture", chartMode);
+        addRow(grid, 3, "Pas", chartMode);
         getChildren().add(grid);
         clear();
     }
 
     public void update(NetWorthDto netWorth, List<SeriesPointDto> points, DashboardFilters filters) {
-        int accountCount = netWorth.accounts() == null ? 0 : netWorth.accounts().size();
-        int allocationCount = netWorth.allocation() == null ? 0 : netWorth.allocation().size();
         int pointCount = points == null ? 0 : points.size();
         period.setText(DesktopFormatters.period(filters.from(), filters.to()));
         valuationDate.setText(DesktopFormatters.date(netWorth.valueDate()));
         seriesPoints.setText(DesktopFormatters.count(pointCount, "point", "points"));
-        valuedAccounts.setText(DesktopFormatters.count(accountCount, "compte", "comptes"));
-        allocationRows.setText(DesktopFormatters.count(allocationCount, "classe", "classes"));
-        chartMode.setText(DesktopFormatters.aggregation(filters.aggregation()) + " / " + DesktopFormatters.bucket(filters.bucket()));
+        chartMode.setText(DesktopFormatters.aggregation(filters.aggregation()) + " / " + filters.displayedBucket());
     }
 
     public void clear() {
         period.setText("--");
         valuationDate.setText("--");
         seriesPoints.setText("--");
-        valuedAccounts.setText("--");
-        allocationRows.setText("--");
         chartMode.setText("--");
     }
 
