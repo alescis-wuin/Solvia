@@ -10,32 +10,27 @@ import javafx.scene.layout.VBox;
 
 public final class DashboardFilters extends VBox {
 
-    private final DatePicker from = Ui.tooltip(new DatePicker(LocalDate.now().minusDays(30)), "Date de debut de la periode.");
-    private final DatePicker to = Ui.tooltip(new DatePicker(LocalDate.now()), "Date de fin de la periode.");
-    private final ComboBox<String> bucket = Ui.tooltip(new ComboBox<>(), "Pas d'agregation de la serie temporelle.");
-    private final ComboBox<String> aggregation = Ui.tooltip(new ComboBox<>(), "Mode d'agregation du graphique.");
-    private final Button refresh = Ui.tooltip(new Button("Actualiser"), "Recharge le dashboard.");
+    private final DatePicker from = Ui.tooltip(new DatePicker(LocalDate.now().minusDays(30)), "Date de début de la période.");
+    private final DatePicker to = Ui.tooltip(new DatePicker(LocalDate.now()), "Date de fin de la période.");
+    private final DashboardTimeStepSelector stepSelector = new DashboardTimeStepSelector();
+    private final ComboBox<String> aggregation = Ui.tooltip(new ComboBox<>(), "Mode d'agrégation du graphique.");
+    private final Button refresh = Ui.tooltip(new Button("↻"), "Recharge le dashboard.");
 
     public DashboardFilters() {
-        getStyleClass().add("section-card");
-        setSpacing(12);
-        bucket.getItems().setAll("1d", "2d", "1w", "1m");
-        bucket.setValue("2d");
+        getStyleClass().add("dashboard-filters");
+        setSpacing(10);
         aggregation.getItems().setAll("last", "average");
         aggregation.setValue("last");
+        refresh.getStyleClass().addAll("icon-button", "icon-refresh");
         refresh.setDisable(true);
 
         HBox row = Ui.style(new HBox(12,
                 Ui.fieldLabel("Du", from), from,
                 Ui.fieldLabel("Au", to), to,
-                Ui.fieldLabel("Pas", bucket), bucket,
-                Ui.fieldLabel("Agregation", aggregation), aggregation,
-                refresh), "form-row");
-        getChildren().addAll(
-                Ui.sectionTitle("Filtres"),
-                Ui.help("Selectionne la periode et la granularite du graphique."),
-                row
-        );
+                stepSelector,
+                Ui.fieldLabel("Agrégation", aggregation), aggregation,
+                refresh), "form-row", "dashboard-filter-row");
+        getChildren().add(row);
     }
 
     public LocalDate from() {
@@ -47,7 +42,15 @@ public final class DashboardFilters extends VBox {
     }
 
     public String bucket() {
-        return bucket.getValue();
+        return stepSelector.apiBucket();
+    }
+
+    public String displayedBucket() {
+        return stepSelector.displayCode();
+    }
+
+    public DashboardTimeStep selectedStep() {
+        return stepSelector.selectedStep();
     }
 
     public String aggregation() {
@@ -60,5 +63,7 @@ public final class DashboardFilters extends VBox {
 
     public void setRefreshDisabled(boolean disabled) {
         refresh.setDisable(disabled);
+        stepSelector.setDisabled(disabled);
+        aggregation.setDisable(disabled);
     }
 }
