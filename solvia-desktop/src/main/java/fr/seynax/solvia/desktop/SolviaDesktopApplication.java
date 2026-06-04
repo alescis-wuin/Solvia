@@ -10,6 +10,8 @@ import fr.seynax.solvia.desktop.ui.AccountsView;
 import fr.seynax.solvia.desktop.ui.AssetsPositionsView;
 import fr.seynax.solvia.desktop.ui.BackendStatusBanner;
 import fr.seynax.solvia.desktop.ui.DashboardView;
+import fr.seynax.solvia.desktop.ui.DesktopEventBus;
+import fr.seynax.solvia.desktop.ui.DesktopEventBus.EventType;
 import fr.seynax.solvia.desktop.ui.EntriesView;
 import fr.seynax.solvia.desktop.ui.SolviaShell;
 import fr.seynax.solvia.desktop.ui.ThemeSupport;
@@ -22,24 +24,25 @@ public class SolviaDesktopApplication extends Application {
     public void start(Stage stage) {
         SolviaDesktopPreferences preferences = new SolviaDesktopPreferences();
         SolviaApiClient apiClient = new SolviaApiClient(preferences.backendUri());
+        DesktopEventBus eventBus = new DesktopEventBus();
         SolviaShell shell = new SolviaShell();
 
-        AccountsView accountsView = new AccountsView(apiClient);
-        EntriesView entriesView = new EntriesView(apiClient);
-        AssetsPositionsView assetsPositionsView = new AssetsPositionsView(apiClient);
+        AccountsView accountsView = new AccountsView(apiClient, eventBus);
+        EntriesView entriesView = new EntriesView(apiClient, eventBus);
+        AssetsPositionsView assetsPositionsView = new AssetsPositionsView(apiClient, eventBus);
         DashboardView dashboardView = new DashboardView(
                 apiClient,
+                eventBus,
                 () -> shell.showPage("Saisie"),
                 () -> shell.showPage("Comptes"),
                 () -> shell.showPage("Actifs & positions")
         );
-        accountsView.setOnAccountsChanged(() -> {
+
+        eventBus.subscribe(EventType.ACCOUNTS_CHANGED, () -> {
             entriesView.refreshAccounts();
             assetsPositionsView.refresh();
-            dashboardView.refresh();
         });
-        entriesView.setOnPortfolioDataChanged(dashboardView::refresh);
-        assetsPositionsView.setOnPortfolioDataChanged(dashboardView::refresh);
+        eventBus.subscribe(EventType.PORTFOLIO_DATA_CHANGED, dashboardView::refresh);
 
         backendStatusBanner = new BackendStatusBanner(apiClient, preferences, status -> {
             propagateStatus(status, dashboardView, accountsView, entriesView, assetsPositionsView);
