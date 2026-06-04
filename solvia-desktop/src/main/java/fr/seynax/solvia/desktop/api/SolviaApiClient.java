@@ -1,12 +1,15 @@
 package fr.seynax.solvia.desktop.api;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -22,20 +25,35 @@ import fr.seynax.solvia.desktop.api.ApiDtos.AccountSnapshotCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.CashFlowCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.NetWorthDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.PerformanceDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.ReadinessDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.SeriesPointDto;
 
 public final class SolviaApiClient {
+
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(4);
 
     private final URI baseUri;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
     public SolviaApiClient(URI baseUri) {
-        this.baseUri = baseUri;
-        this.httpClient = HttpClient.newHttpClient();
+        this.baseUri = normalizeBaseUri(baseUri);
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(3))
+                .build();
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    }
+
+    public URI baseUri() {
+        return baseUri;
+    }
+
+    public CompletableFuture<BackendStatusSnapshot> readiness() {
+        return get("/api/readiness", ReadinessDto.class)
+                .thenApply(readiness -> BackendStatusSnapshot.from(baseUri.toString(), readiness))
+                .exceptionally(error -> BackendStatusSnapshot.unavailable(baseUri.toString(), userMessage(error)));
     }
 
     public CompletableFuture<List<AccountDto>> accounts() {
@@ -73,30 +91,53 @@ public final class SolviaApiClient {
         return get("/api/performance?from=" + from + "&to=" + to + "&currency=" + encode(currency), PerformanceDto.class);
     }
 
+    public String userMessage(Throwable throwable) {
+        Throwable root = rootCause(throwable);
+        if (root instanceof SolviaApiException apiException) {
+            return apiException.userMessage();
+        }
+        if (root instanceof HttpTimeoutException) {
+            return "Le backend ne répond pas dans le délai attendu.";
+        }
+        if (root instanceof ConnectException) {
+            return "Connexion impossible au backend local. Vérifier qu’il est démarré.";
+        }
+        String message = root.getMessage();
+        if (message == null || message.isBlank()) {
+            return "Erreur de communication avec le backend.";
+        }
+        return message;
+    }
+
     private <T> CompletableFuture<T> get(String path, Class<T> responseType) {
-        HttpRequest request = HttpRequest.newBuilder(resolve(path)).GET().header("Accept", "application/json").build();
+        HttpRequest request = request(path).GET().build();
         return send(request).thenApply(body -> read(body, responseType));
     }
 
     private <T> CompletableFuture<T> get(String path, TypeReference<T> responseType) {
-        HttpRequest request = HttpRequest.newBuilder(resolve(path)).GET().header("Accept", "application/json").build();
+        HttpRequest request = request(path).GET().build();
         return send(request).thenApply(body -> read(body, responseType));
     }
 
     private <T> CompletableFuture<T> post(String path, Object payload, Class<T> responseType) {
-        HttpRequest request = HttpRequest.newBuilder(resolve(path))
+        HttpRequest request = request(path)
                 .POST(HttpRequest.BodyPublishers.ofString(write(payload)))
-                .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
                 .build();
         return send(request).thenApply(body -> read(body, responseType));
+    }
+
+    private HttpRequest.Builder request(String path) {
+        return HttpRequest.newBuilder(resolve(path))
+                .timeout(REQUEST_TIMEOUT)
+                .header("Accept", "application/json");
     }
 
     private CompletableFuture<String> send(HttpRequest request) {
         return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> {
                     if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                        throw new IllegalStateException("Backend returned HTTP " + response.statusCode() + ": " + response.body());
+                        throw SolviaApiException.from(response.statusCode(), response.body(), objectMapper);
                     }
                     return response.body();
                 });
@@ -132,5 +173,20 @@ public final class SolviaApiClient {
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to read backend response", exception);
         }
+    }
+
+    private Throwable rootCause(Throwable throwable) {
+        Throwable current = throwable;
+        while (current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
+    }
+
+    private static URI normalizeBaseUri(URI uri) {
+        if (uri == null || uri.getScheme() == null || uri.getHost() == null) {
+            throw new IllegalArgumentException("Backend URL must be an absolute HTTP URL");
+        }
+        return uri;
     }
 }
