@@ -6,21 +6,27 @@ import javafx.scene.layout.HBox;
 public final class DashboardQuickLinksCard extends SectionCard {
 
     private final Button dataEntry = new Button("Ajouter une saisie");
+    private final Button assets = new Button("Actifs & positions");
     private final Button accounts = new Button("Gérer les comptes");
     private final Button refresh = new Button("Actualiser");
 
     public DashboardQuickLinksCard() {
         super("Raccourcis", "Accès direct aux workflows quotidiens du suivi patrimonial.");
         dataEntry.setTooltip(new javafx.scene.control.Tooltip("Ouvre l'écran de saisie des valeurs et des flux."));
+        assets.setTooltip(new javafx.scene.control.Tooltip("Ouvre l'écran des actifs, positions et valorisations."));
         accounts.setTooltip(new javafx.scene.control.Tooltip("Ouvre l'écran des comptes."));
         refresh.setTooltip(new javafx.scene.control.Tooltip("Recharge le dashboard."));
         dataEntry.getStyleClass().add("primary-action");
-        HBox row = Ui.style(new HBox(12, dataEntry, accounts, refresh), "dashboard-action-row");
+        HBox row = Ui.style(new HBox(12, dataEntry, assets, accounts, refresh), "dashboard-action-row");
         getChildren().add(row);
     }
 
     public void onDataEntry(Runnable task) {
         dataEntry.setOnAction(event -> execute(task));
+    }
+
+    public void onAssets(Runnable task) {
+        assets.setOnAction(event -> execute(task));
     }
 
     public void onAccounts(Runnable task) {
