@@ -29,6 +29,7 @@ class JavaFxSmokeTest {
                 SolviaApiClient apiClient = new SolviaApiClient(URI.create("http://127.0.0.1:8080"));
                 assertNotNull(new DashboardView(apiClient));
                 assertNotNull(new AccountsView(apiClient));
+                assertNotNull(new AssetsPositionsView(apiClient));
                 assertNotNull(new EntriesView(apiClient));
                 assertNotNull(new BackendStatusBanner(apiClient, new fr.seynax.solvia.desktop.SolviaDesktopPreferences(), ignored -> { }));
             } catch (Throwable throwable) {
