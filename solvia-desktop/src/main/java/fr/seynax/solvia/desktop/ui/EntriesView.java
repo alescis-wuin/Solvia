@@ -9,13 +9,14 @@ import java.util.Objects;
 import java.util.UUID;
 
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
-import javafx.scene.control.DatePicker;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -53,6 +54,8 @@ public final class EntriesView extends VBox {
     private final TextField flowLabel = Ui.tooltip(new TextField(), "Libellé optionnel pour retrouver le flux.");
     private final Button saveFlow = Ui.tooltip(new Button("Enregistrer le flux"), "Ajoute un flux financier important.");
 
+    private final TextField snapshotFilter = Ui.tooltip(new TextField(), "Filtre les snapshots affichés.");
+    private final TextField flowFilter = Ui.tooltip(new TextField(), "Filtre les flux affichés.");
     private final TableView<SnapshotEntryRow> snapshotHistory = new TableView<>();
     private final TableView<CashFlowRow> cashFlowHistory = new TableView<>();
 
@@ -60,6 +63,8 @@ public final class EntriesView extends VBox {
     private List<AccountDto> currentAccounts = List.of();
     private List<AccountSnapshotDto> currentSnapshotHistory = List.of();
     private List<CashFlowDto> currentCashFlows = List.of();
+    private boolean snapshotCorrectionMode;
+    private UUID correctingSnapshotId;
     private Runnable onPortfolioDataChanged = () -> { };
 
     public EntriesView(SolviaApiClient apiClient) {
@@ -69,6 +74,8 @@ public final class EntriesView extends VBox {
         setPadding(new Insets(20));
         configureCombos();
         configureTables();
+        snapshotFilter.textProperty().addListener((observable, previous, value) -> renderSnapshotHistory());
+        flowFilter.textProperty().addListener((observable, previous, value) -> renderCashFlowHistory());
         getChildren().addAll(forms(), histories(), state, empty);
         setInputsDisabled(true);
         state.show("Vérification", "Vérification du backend local...", "state-info");
@@ -118,8 +125,8 @@ public final class EntriesView extends VBox {
             if (accounts.isEmpty()) {
                 currentSnapshotHistory = List.of();
                 currentCashFlows = List.of();
-                snapshotHistory.getItems().clear();
-                cashFlowHistory.getItems().clear();
+                renderSnapshotHistory();
+                renderCashFlowHistory();
                 empty.show("Aucun compte", "Crée un compte avant de saisir un snapshot ou un flux.");
                 state.show("Aucun compte", "La saisie nécessite au moins un compte.", "state-warning");
             } else {
@@ -161,7 +168,7 @@ public final class EntriesView extends VBox {
         grid.add(Ui.fieldLabel("Devise", snapshotCurrency), 2, 1);
         grid.add(snapshotCurrency, 3, 1);
         grid.add(saveSnapshot, 1, 2);
-        return new SectionCard("Snapshot de compte", "Saisis une valeur observée. Un doublon compte/date est bloqué pour préserver un historique lisible.", grid);
+        return new SectionCard("Snapshot de compte", "Une correction crée un nouveau snapshot historisé, sans modifier l'ancien.", grid);
     }
 
     private SectionCard flowForm() {
@@ -182,15 +189,17 @@ public final class EntriesView extends VBox {
         grid.add(Ui.fieldLabel("Libellé", flowLabel), 2, 2);
         grid.add(flowLabel, 3, 2);
         grid.add(saveFlow, 1, 3);
-        return new SectionCard("Flux financier", "Saisis toujours un montant positif. Le type indique si le flux ajoute ou retire du capital.", grid);
+        return new SectionCard("Flux financier", "Les corrections de flux créent un flux compensatoire, sans modifier le flux source.", grid);
     }
 
     private SectionCard snapshotHistorySection() {
-        return new SectionCard("Snapshots du compte", "Historique du compte sélectionné dans le formulaire de snapshot.", snapshotHistory);
+        VBox content = new VBox(10, snapshotFilter, snapshotHistory);
+        return new SectionCard("Snapshots du compte", "Historique filtrable du compte sélectionné.", content);
     }
 
     private SectionCard cashFlowHistorySection() {
-        return new SectionCard("Flux du compte", "Historique du compte sélectionné dans le formulaire de flux.", cashFlowHistory);
+        VBox content = new VBox(10, flowFilter, cashFlowHistory);
+        return new SectionCard("Flux du compte", "Historique filtrable du compte sélectionné.", content);
     }
 
     private void configureCombos() {
@@ -215,7 +224,9 @@ public final class EntriesView extends VBox {
         snapshotAmountColumn.setCellValueFactory(new PropertyValueFactory<>("balance"));
         TableColumn<SnapshotEntryRow, String> snapshotRecordedColumn = new TableColumn<>("Saisie");
         snapshotRecordedColumn.setCellValueFactory(new PropertyValueFactory<>("recordedAt"));
-        snapshotHistory.getColumns().setAll(snapshotDateColumn, snapshotAmountColumn, snapshotRecordedColumn);
+        TableColumn<SnapshotEntryRow, HBox> snapshotActionsColumn = new TableColumn<>("Actions");
+        snapshotActionsColumn.setCellValueFactory(data -> new SimpleObjectProperty<>(snapshotActions(data.getValue())));
+        snapshotHistory.getColumns().setAll(snapshotDateColumn, snapshotAmountColumn, snapshotRecordedColumn, snapshotActionsColumn);
         snapshotHistory.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         snapshotHistory.setPrefHeight(260);
 
@@ -227,14 +238,28 @@ public final class EntriesView extends VBox {
         flowAmountColumn.setCellValueFactory(new PropertyValueFactory<>("amount"));
         TableColumn<CashFlowRow, String> flowLabelColumn = new TableColumn<>("Libellé");
         flowLabelColumn.setCellValueFactory(new PropertyValueFactory<>("label"));
-        cashFlowHistory.getColumns().setAll(flowDateColumn, flowTypeColumn, flowAmountColumn, flowLabelColumn);
+        TableColumn<CashFlowRow, HBox> flowActionsColumn = new TableColumn<>("Actions");
+        flowActionsColumn.setCellValueFactory(data -> new SimpleObjectProperty<>(cashFlowActions(data.getValue())));
+        cashFlowHistory.getColumns().setAll(flowDateColumn, flowTypeColumn, flowAmountColumn, flowLabelColumn, flowActionsColumn);
         cashFlowHistory.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         cashFlowHistory.setPrefHeight(260);
     }
 
+    private HBox snapshotActions(SnapshotEntryRow row) {
+        Button correct = Ui.tooltip(new Button("Corriger"), "Prépare une correction append-only pour ce snapshot.");
+        correct.setOnAction(event -> prepareSnapshotCorrection(row.snapshot()));
+        return new HBox(6, correct);
+    }
+
+    private HBox cashFlowActions(CashFlowRow row) {
+        Button correct = Ui.tooltip(new Button("Corriger"), "Prépare un flux compensatoire append-only.");
+        correct.setOnAction(event -> prepareCashFlowCorrection(row.cashFlow()));
+        return new HBox(6, correct);
+    }
+
     private void loadSnapshotHistory(AccountDto account) {
         currentSnapshotHistory = List.of();
-        snapshotHistory.getItems().clear();
+        renderSnapshotHistory();
         if (account == null) {
             return;
         }
@@ -243,16 +268,14 @@ public final class EntriesView extends VBox {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
                 return;
             }
-            currentSnapshotHistory = snapshots.stream()
-                    .sorted(snapshotComparator())
-                    .toList();
-            snapshotHistory.getItems().setAll(currentSnapshotHistory.stream().map(SnapshotEntryRow::from).toList());
+            currentSnapshotHistory = snapshots.stream().sorted(snapshotComparator()).toList();
+            renderSnapshotHistory();
         }));
     }
 
     private void loadCashFlowHistory(AccountDto account) {
         currentCashFlows = List.of();
-        cashFlowHistory.getItems().clear();
+        renderCashFlowHistory();
         if (account == null) {
             return;
         }
@@ -261,11 +284,34 @@ public final class EntriesView extends VBox {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
                 return;
             }
-            currentCashFlows = cashFlows.stream()
-                    .sorted(cashFlowComparator())
-                    .toList();
-            cashFlowHistory.getItems().setAll(currentCashFlows.stream().map(this::cashFlowRow).toList());
+            currentCashFlows = cashFlows.stream().sorted(cashFlowComparator()).toList();
+            renderCashFlowHistory();
         }));
+    }
+
+    private void renderSnapshotHistory() {
+        String query = normalized(snapshotFilter.getText());
+        snapshotHistory.getItems().setAll(currentSnapshotHistory.stream()
+                .filter(snapshot -> query.isBlank()
+                        || DesktopFormatters.date(snapshot.valueDate()).toLowerCase(Locale.ROOT).contains(query)
+                        || DesktopFormatters.money(snapshot.balance()).toLowerCase(Locale.ROOT).contains(query)
+                        || normalized(snapshot.confidence()).contains(query)
+                        || normalized(snapshot.note()).contains(query))
+                .map(SnapshotEntryRow::from)
+                .toList());
+    }
+
+    private void renderCashFlowHistory() {
+        String query = normalized(flowFilter.getText());
+        cashFlowHistory.getItems().setAll(currentCashFlows.stream()
+                .filter(flow -> query.isBlank()
+                        || DesktopFormatters.date(flow.valueDate()).toLowerCase(Locale.ROOT).contains(query)
+                        || normalized(flow.type()).contains(query)
+                        || normalized(cashFlowType(flow.type())).contains(query)
+                        || DesktopFormatters.money(flow.amount()).toLowerCase(Locale.ROOT).contains(query)
+                        || normalized(flow.label()).contains(query))
+                .map(this::cashFlowRow)
+                .toList());
     }
 
     private void saveSnapshot() {
@@ -283,8 +329,12 @@ public final class EntriesView extends VBox {
             state.show("Date requise", "Sélectionner une date de snapshot.", "state-warning");
             return;
         }
-        if (hasSnapshotOnDate(date)) {
-            state.show("Snapshot existant", "Un snapshot existe déjà pour ce compte à cette date.", "state-warning");
+        boolean existingDate = hasSnapshotOnDate(date);
+        if (existingDate && !snapshotCorrectionMode && !Ui.confirm(
+                "Créer une correction",
+                "Un snapshot existe déjà pour cette date.",
+                "Solvia va créer un nouveau snapshot à la même date. Le plus récent par date de saisie sera utilisé par les calculs."
+        )) {
             return;
         }
         ValidationResult<BigDecimal> amount = InputValidation.amount(snapshotAmount.getText(), "Montant du snapshot");
@@ -298,13 +348,10 @@ public final class EntriesView extends VBox {
             return;
         }
         snapshotCurrency.setText(currency.value());
-        AccountSnapshotCreateDto request = new AccountSnapshotCreateDto(
-                account.id(),
-                date,
-                new MoneyDto(amount.value(), currency.value()),
-                "OBSERVED",
-                null
-        );
+        String note = snapshotCorrectionMode
+                ? "Correction append-only du snapshot " + correctingSnapshotId
+                : existingDate ? "Correction append-only d'un snapshot existant" : null;
+        AccountSnapshotCreateDto request = new AccountSnapshotCreateDto(account.id(), date, new MoneyDto(amount.value(), currency.value()), "OBSERVED", note);
         saveSnapshot.setDisable(true);
         state.show("Enregistrement", "Enregistrement du snapshot...", "state-info");
         apiClient.createAccountSnapshot(request).whenComplete((ignored, error) -> Platform.runLater(() -> {
@@ -314,6 +361,9 @@ public final class EntriesView extends VBox {
                 return;
             }
             snapshotAmount.clear();
+            snapshotCorrectionMode = false;
+            correctingSnapshotId = null;
+            saveSnapshot.setText("Enregistrer le snapshot");
             state.show("Snapshot enregistré", "La valeur observée a été ajoutée.", "state-success");
             loadSnapshotHistory(account);
             onPortfolioDataChanged.run();
@@ -347,17 +397,14 @@ public final class EntriesView extends VBox {
         }
         flowCurrency.setText(currency.value());
         String label = nullIfBlank(flowLabel.getText());
-        if (hasDuplicateFlow(date, flowType.getValue(), amount.value(), currency.value(), label)) {
-            state.show("Flux existant", "Un flux identique existe déjà pour ce compte.", "state-warning");
+        if (hasDuplicateFlow(date, flowType.getValue(), amount.value(), currency.value(), label) && !Ui.confirm(
+                "Créer un flux similaire",
+                "Un flux identique existe déjà pour ce compte.",
+                "Confirme la création uniquement s'il s'agit bien d'une écriture distincte."
+        )) {
             return;
         }
-        CashFlowCreateDto request = new CashFlowCreateDto(
-                account.id(),
-                flowType.getValue(),
-                date,
-                new MoneyDto(amount.value(), currency.value()),
-                label
-        );
+        CashFlowCreateDto request = new CashFlowCreateDto(account.id(), flowType.getValue(), date, new MoneyDto(amount.value(), currency.value()), label);
         saveFlow.setDisable(true);
         state.show("Enregistrement", "Enregistrement du flux...", "state-info");
         apiClient.createCashFlow(request).whenComplete((ignored, error) -> Platform.runLater(() -> {
@@ -374,9 +421,51 @@ public final class EntriesView extends VBox {
         }));
     }
 
+    private void prepareSnapshotCorrection(AccountSnapshotDto snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+        if (!Ui.confirm("Corriger un snapshot", "Préparer une correction append-only ?", "Le snapshot source ne sera pas modifié. Un nouveau snapshot sera créé à la même date.")) {
+            return;
+        }
+        selectAccount(snapshotAccount, snapshot.accountId());
+        snapshotDate.setValue(snapshot.valueDate());
+        snapshotAmount.setText(snapshot.balance() == null || snapshot.balance().amount() == null ? "" : snapshot.balance().amount().toPlainString());
+        snapshotCurrency.setText(snapshot.balance() == null ? "EUR" : snapshot.balance().currencyCode());
+        snapshotCorrectionMode = true;
+        correctingSnapshotId = snapshot.id();
+        saveSnapshot.setText("Enregistrer la correction");
+        state.show("Correction préparée", "Modifie le montant puis enregistre une nouvelle valeur historisée.", "state-info");
+    }
+
+    private void prepareCashFlowCorrection(CashFlowDto flow) {
+        if (flow == null) {
+            return;
+        }
+        if (!Ui.confirm("Corriger un flux", "Préparer un flux compensatoire ?", "Le flux source ne sera pas modifié. Solvia va préremplir une écriture de correction.")) {
+            return;
+        }
+        selectAccount(flowAccount, flow.accountId());
+        flowDate.setValue(flow.valueDate());
+        flowType.setValue(correctionType(flow.type()));
+        flowAmount.setText(flow.amount() == null || flow.amount().amount() == null ? "" : flow.amount().amount().abs().toPlainString());
+        flowCurrency.setText(flow.amount() == null ? "EUR" : flow.amount().currencyCode());
+        flowLabel.setText("Correction du flux " + flow.id() + (flow.label() == null || flow.label().isBlank() ? "" : " - " + flow.label()));
+        state.show("Correction préparée", "Vérifie le flux compensatoire puis enregistre-le.", "state-info");
+    }
+
+    private String correctionType(String type) {
+        return switch (type == null ? "" : type) {
+            case "DEPOSIT" -> "WITHDRAWAL";
+            case "WITHDRAWAL" -> "DEPOSIT";
+            case "TRANSFER_IN" -> "TRANSFER_OUT";
+            case "TRANSFER_OUT" -> "TRANSFER_IN";
+            default -> "CORRECTION";
+        };
+    }
+
     private boolean hasSnapshotOnDate(LocalDate date) {
-        return currentSnapshotHistory.stream()
-                .anyMatch(snapshot -> date.equals(snapshot.valueDate()));
+        return currentSnapshotHistory.stream().anyMatch(snapshot -> date.equals(snapshot.valueDate()));
     }
 
     private boolean hasDuplicateFlow(LocalDate date, String type, BigDecimal amount, String currency, String label) {
@@ -406,14 +495,18 @@ public final class EntriesView extends VBox {
     private void restoreAccountSelection(ComboBox<AccountDto> comboBox, UUID accountId) {
         comboBox.setValue(null);
         if (accountId != null) {
-            comboBox.getItems().stream()
-                    .filter(account -> account.id().equals(accountId))
-                    .findFirst()
-                    .ifPresent(comboBox::setValue);
+            selectAccount(comboBox, accountId);
         }
         if (comboBox.getValue() == null && !comboBox.getItems().isEmpty()) {
             comboBox.setValue(comboBox.getItems().get(0));
         }
+    }
+
+    private void selectAccount(ComboBox<AccountDto> comboBox, UUID accountId) {
+        comboBox.getItems().stream()
+                .filter(account -> account.id().equals(accountId))
+                .findFirst()
+                .ifPresent(comboBox::setValue);
     }
 
     private Comparator<AccountSnapshotDto> snapshotComparator() {
@@ -458,6 +551,8 @@ public final class EntriesView extends VBox {
         flowAmount.setDisable(disabled);
         flowCurrency.setDisable(disabled);
         flowLabel.setDisable(disabled);
+        snapshotFilter.setDisable(disabled);
+        flowFilter.setDisable(disabled);
         saveSnapshot.setDisable(disabled);
         saveFlow.setDisable(disabled);
     }
@@ -468,8 +563,8 @@ public final class EntriesView extends VBox {
         currentCashFlows = List.of();
         snapshotAccount.getItems().clear();
         flowAccount.getItems().clear();
-        snapshotHistory.getItems().clear();
-        cashFlowHistory.getItems().clear();
+        renderSnapshotHistory();
+        renderCashFlowHistory();
     }
 
     private String nullIfBlank(String value) {
@@ -480,23 +575,29 @@ public final class EntriesView extends VBox {
         return value == null || value.isBlank() ? "" : value.strip().toLowerCase(Locale.ROOT);
     }
 
+    private String normalized(String value) {
+        return value == null ? "" : value.strip().toLowerCase(Locale.ROOT);
+    }
+
     public static final class SnapshotEntryRow {
+        private final AccountSnapshotDto snapshot;
         private final String date;
         private final String balance;
         private final String recordedAt;
 
-        private SnapshotEntryRow(String date, String balance, String recordedAt) {
+        private SnapshotEntryRow(AccountSnapshotDto snapshot, String date, String balance, String recordedAt) {
+            this.snapshot = snapshot;
             this.date = date;
             this.balance = balance;
             this.recordedAt = recordedAt;
         }
 
         static SnapshotEntryRow from(AccountSnapshotDto snapshot) {
-            return new SnapshotEntryRow(
-                    DesktopFormatters.date(snapshot.valueDate()),
-                    DesktopFormatters.money(snapshot.balance()),
-                    DesktopFormatters.time(snapshot.recordedAt())
-            );
+            return new SnapshotEntryRow(snapshot, DesktopFormatters.date(snapshot.valueDate()), DesktopFormatters.money(snapshot.balance()), DesktopFormatters.time(snapshot.recordedAt()));
+        }
+
+        AccountSnapshotDto snapshot() {
+            return snapshot;
         }
 
         public String getDate() {
@@ -513,25 +614,26 @@ public final class EntriesView extends VBox {
     }
 
     private CashFlowRow cashFlowRow(CashFlowDto cashFlow) {
-        return new CashFlowRow(
-                DesktopFormatters.date(cashFlow.valueDate()),
-                cashFlowType(cashFlow.type()),
-                DesktopFormatters.money(cashFlow.amount()),
-                cashFlow.label() == null || cashFlow.label().isBlank() ? "—" : cashFlow.label()
-        );
+        return new CashFlowRow(cashFlow, DesktopFormatters.date(cashFlow.valueDate()), cashFlowType(cashFlow.type()), DesktopFormatters.money(cashFlow.amount()), cashFlow.label() == null || cashFlow.label().isBlank() ? "—" : cashFlow.label());
     }
 
     public static final class CashFlowRow {
+        private final CashFlowDto cashFlow;
         private final String date;
         private final String type;
         private final String amount;
         private final String label;
 
-        private CashFlowRow(String date, String type, String amount, String label) {
+        private CashFlowRow(CashFlowDto cashFlow, String date, String type, String amount, String label) {
+            this.cashFlow = cashFlow;
             this.date = date;
             this.type = type;
             this.amount = amount;
             this.label = label;
+        }
+
+        CashFlowDto cashFlow() {
+            return cashFlow;
         }
 
         public String getDate() {
