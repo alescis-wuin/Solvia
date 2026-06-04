@@ -27,9 +27,9 @@ public class SolviaDesktopApplication extends Application {
         DesktopEventBus eventBus = new DesktopEventBus();
         SolviaShell shell = new SolviaShell();
 
-        AccountsView accountsView = new AccountsView(apiClient, eventBus);
-        EntriesView entriesView = new EntriesView(apiClient, eventBus);
-        AssetsPositionsView assetsPositionsView = new AssetsPositionsView(apiClient, eventBus);
+        AccountsView accountsView = new AccountsView(apiClient);
+        EntriesView entriesView = new EntriesView(apiClient);
+        AssetsPositionsView assetsPositionsView = new AssetsPositionsView(apiClient);
         DashboardView dashboardView = new DashboardView(
                 apiClient,
                 eventBus,
@@ -43,6 +43,12 @@ public class SolviaDesktopApplication extends Application {
             assetsPositionsView.refresh();
         });
         eventBus.subscribe(EventType.PORTFOLIO_DATA_CHANGED, dashboardView::refresh);
+        accountsView.setOnAccountsChanged(() -> {
+            eventBus.publish(EventType.ACCOUNTS_CHANGED);
+            eventBus.publish(EventType.PORTFOLIO_DATA_CHANGED);
+        });
+        entriesView.setOnPortfolioDataChanged(() -> eventBus.publish(EventType.PORTFOLIO_DATA_CHANGED));
+        assetsPositionsView.setOnPortfolioDataChanged(() -> eventBus.publish(EventType.PORTFOLIO_DATA_CHANGED));
 
         backendStatusBanner = new BackendStatusBanner(apiClient, preferences, status -> {
             propagateStatus(status, dashboardView, accountsView, entriesView, assetsPositionsView);
