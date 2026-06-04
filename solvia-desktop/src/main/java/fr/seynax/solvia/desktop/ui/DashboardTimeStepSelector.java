@@ -66,18 +66,18 @@ public final class DashboardTimeStepSelector extends VBox {
 
     private List<DashboardTimeStep> steps() {
         return List.of(
-                DashboardTimeStep.of("1s", "Seconde", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("5s", "5 secondes", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("15s", "15 secondes", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("30s", "30 secondes", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("1min", "Minute", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("5min", "5 minutes", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("15min", "15 minutes", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("30min", "30 minutes", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("1h", "Heure", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("6h", "6 heures", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("12h", "12 heures", "1d", "Le dashboard se recharge dès la sélection. Les snapshots V1 restent datés au jour, donc le calcul reste journalier.", true),
-                DashboardTimeStep.of("1d", "Jour", "1d", "Un point par jour. C'est la granularité native actuelle des snapshots Solvia.", false),
+                DashboardTimeStep.of("1s", "Seconde", "1s", "Un point par seconde. À utiliser sur une période courte pour éviter une série trop dense.", true),
+                DashboardTimeStep.of("5s", "5 secondes", "5s", "Un point toutes les 5 secondes. À utiliser sur une période courte.", true),
+                DashboardTimeStep.of("15s", "15 secondes", "15s", "Un point toutes les 15 secondes. À utiliser sur une période courte.", true),
+                DashboardTimeStep.of("30s", "30 secondes", "30s", "Un point toutes les 30 secondes. À utiliser sur une période courte.", true),
+                DashboardTimeStep.of("1min", "Minute", "1min", "Un point par minute.", true),
+                DashboardTimeStep.of("5min", "5 minutes", "5min", "Un point toutes les 5 minutes.", true),
+                DashboardTimeStep.of("15min", "15 minutes", "15min", "Un point toutes les 15 minutes.", true),
+                DashboardTimeStep.of("30min", "30 minutes", "30min", "Un point toutes les 30 minutes.", true),
+                DashboardTimeStep.of("1h", "Heure", "1h", "Un point par heure.", true),
+                DashboardTimeStep.of("6h", "6 heures", "6h", "Un point toutes les 6 heures.", true),
+                DashboardTimeStep.of("12h", "12 heures", "12h", "Un point toutes les 12 heures.", true),
+                DashboardTimeStep.of("1d", "Jour", "1d", "Un point par jour.", false),
                 DashboardTimeStep.of("2d", "2 jours", "2d", "Un point tous les deux jours, utile pour réduire le bruit visuel sur 30 jours.", false),
                 DashboardTimeStep.of("3d", "3 jours", "3d", "Un point tous les trois jours.", false),
                 DashboardTimeStep.of("1w", "Semaine", "1w", "Un point par semaine.", false),
@@ -85,7 +85,7 @@ public final class DashboardTimeStepSelector extends VBox {
                 DashboardTimeStep.of("1m", "Mois", "1m", "Un point par mois.", false),
                 DashboardTimeStep.of("3m", "Trimestre", "3m", "Un point par trimestre.", false),
                 DashboardTimeStep.of("6m", "Semestre", "6m", "Un point par semestre.", false),
-                DashboardTimeStep.of("1y", "Année", "12m", "Un point par année, converti en 12 mois pour le backend V1.", false)
+                DashboardTimeStep.of("1y", "Année", "1y", "Un point par année.", false)
         );
     }
 }
