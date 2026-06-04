@@ -32,7 +32,7 @@ public final class SolviaApiClient {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(4);
 
-    private final URI baseUri;
+    private volatile URI baseUri;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
@@ -50,10 +50,15 @@ public final class SolviaApiClient {
         return baseUri;
     }
 
+    public void updateBaseUri(URI baseUri) {
+        this.baseUri = normalizeBaseUri(baseUri);
+    }
+
     public CompletableFuture<BackendStatusSnapshot> readiness() {
+        URI currentBaseUri = baseUri;
         return get("/api/readiness", ReadinessDto.class)
-                .thenApply(readiness -> BackendStatusSnapshot.from(baseUri.toString(), readiness))
-                .exceptionally(error -> BackendStatusSnapshot.unavailable(baseUri.toString(), userMessage(error)));
+                .thenApply(readiness -> BackendStatusSnapshot.from(currentBaseUri.toString(), readiness))
+                .exceptionally(error -> BackendStatusSnapshot.unavailable(currentBaseUri.toString(), userMessage(error)));
     }
 
     public CompletableFuture<List<AccountDto>> accounts() {
@@ -186,6 +191,9 @@ public final class SolviaApiClient {
     private static URI normalizeBaseUri(URI uri) {
         if (uri == null || uri.getScheme() == null || uri.getHost() == null) {
             throw new IllegalArgumentException("Backend URL must be an absolute HTTP URL");
+        }
+        if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
+            throw new IllegalArgumentException("Backend URL must use HTTP or HTTPS");
         }
         return uri;
     }
