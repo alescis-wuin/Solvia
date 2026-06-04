@@ -18,11 +18,13 @@ import fr.seynax.solvia.desktop.api.ApiDtos.AccountDto;
 import fr.seynax.solvia.desktop.api.BackendConnectionState;
 import fr.seynax.solvia.desktop.api.BackendStatusSnapshot;
 import fr.seynax.solvia.desktop.api.SolviaApiClient;
+import fr.seynax.solvia.desktop.ui.InputValidation.ValidationResult;
 
 public final class AccountsView extends VBox {
 
     private final SolviaApiClient apiClient;
     private final StateMessage state = new StateMessage();
+    private final EmptyState empty = new EmptyState();
     private final TableView<AccountRow> table = new TableView<>();
     private final TextField name = Ui.tooltip(new TextField(), "Nom lisible du compte, par exemple Compte courant ou PEA.");
     private final ComboBox<String> type = Ui.tooltip(new ComboBox<>(), "Categorie technique du compte.");
@@ -40,7 +42,7 @@ public final class AccountsView extends VBox {
         type.setValue("CHECKING");
         envelopeType.getItems().setAll("CURRENT_ACCOUNT", "REGULATED_SAVINGS", "PEA", "CTO", "CRYPTO", "PRIVATE_ASSET", "CASHBACK", "OTHER");
         envelopeType.setValue("CURRENT_ACCOUNT");
-        getChildren().addAll(form(), state, tableSection());
+        getChildren().addAll(form(), state, empty, tableSection());
         VBox.setVgrow(table, Priority.ALWAYS);
         setInputsDisabled(true);
         state.show("Verification", "Verification du backend local...", "state-info");
@@ -56,6 +58,7 @@ public final class AccountsView extends VBox {
         if (!backendReady) {
             setInputsDisabled(true);
             table.getItems().clear();
+            empty.show("Backend indisponible", "Les comptes seront affiches quand le backend local sera connecte.");
             state.show("Backend non pret", snapshot.message(), "state-warning");
             return;
         }
@@ -68,6 +71,7 @@ public final class AccountsView extends VBox {
             state.show("Backend non pret", "Backend local non pret.", "state-warning");
             return;
         }
+        empty.hide();
         state.show("Chargement", "Chargement des comptes...", "state-info");
         apiClient.accounts().whenComplete((accounts, error) -> Platform.runLater(() -> {
             if (error != null) {
@@ -75,11 +79,13 @@ public final class AccountsView extends VBox {
                 return;
             }
             table.getItems().setAll(accounts.stream().map(AccountRow::from).toList());
-            state.show(
-                    accounts.isEmpty() ? "Aucun compte" : "Comptes charges",
-                    accounts.isEmpty() ? "Cree un premier compte pour commencer la saisie patrimoniale." : accounts.size() + " compte(s)",
-                    accounts.isEmpty() ? "state-warning" : "state-success"
-            );
+            if (accounts.isEmpty()) {
+                empty.show("Aucun compte", "Cree un premier compte pour commencer la saisie patrimoniale.");
+                state.show("Aucun compte", "Aucun compte n'est encore enregistre.", "state-warning");
+            } else {
+                empty.hide();
+                state.show("Comptes charges", accounts.size() + " compte(s)", "state-success");
+            }
         }));
     }
 
@@ -126,7 +132,17 @@ public final class AccountsView extends VBox {
             state.show("Backend non pret", "Backend local non pret.", "state-warning");
             return;
         }
-        AccountCreateDto request = new AccountCreateDto(name.getText(), type.getValue(), envelopeType.getValue(), currency.getText());
+        if (name.getText() == null || name.getText().isBlank()) {
+            state.show("Nom requis", "Le nom du compte est obligatoire.", "state-warning");
+            return;
+        }
+        ValidationResult<String> currencyResult = InputValidation.currencyCode(currency.getText(), "Devise");
+        if (!currencyResult.valid()) {
+            state.show("Devise invalide", currencyResult.message(), "state-warning");
+            return;
+        }
+        currency.setText(currencyResult.value());
+        AccountCreateDto request = new AccountCreateDto(name.getText(), type.getValue(), envelopeType.getValue(), currencyResult.value());
         create.setDisable(true);
         state.show("Creation", "Creation du compte...", "state-info");
         apiClient.createAccount(request).whenComplete((account, error) -> Platform.runLater(() -> {
