@@ -1,24 +1,26 @@
 package fr.seynax.solvia.desktop.ui;
 
-import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
 import javafx.scene.layout.HBox;
 
-public final class DashboardQuickLinksCard extends SectionCard {
+public final class DashboardQuickLinksCard extends HBox {
 
-    private final Button dataEntry = new Button("Ajouter une saisie");
-    private final Button assets = new Button("Actifs & positions");
-    private final Button accounts = new Button("Gérer les comptes");
-    private final Button refresh = new Button("Actualiser");
+    private final MenuButton menu = new MenuButton();
+    private final MenuItem dataEntry = new MenuItem("Saisie");
+    private final MenuItem assets = new MenuItem("Actifs & positions");
+    private final MenuItem accounts = new MenuItem("Comptes");
+    private final MenuItem refresh = new MenuItem("Actualiser");
 
     public DashboardQuickLinksCard() {
-        super("Raccourcis", "Accès direct aux workflows quotidiens du suivi patrimonial.");
-        dataEntry.setTooltip(new javafx.scene.control.Tooltip("Ouvre l'écran de saisie des valeurs et des flux."));
-        assets.setTooltip(new javafx.scene.control.Tooltip("Ouvre l'écran des actifs, positions et valorisations."));
-        accounts.setTooltip(new javafx.scene.control.Tooltip("Ouvre l'écran des comptes."));
-        refresh.setTooltip(new javafx.scene.control.Tooltip("Recharge le dashboard."));
-        dataEntry.getStyleClass().add("primary-action");
-        HBox row = Ui.style(new HBox(12, dataEntry, assets, accounts, refresh), "dashboard-action-row");
-        getChildren().add(row);
+        getStyleClass().add("dashboard-toolbar");
+        menu.getStyleClass().addAll("hamburger-menu", "icon-hamburger");
+        menu.setText("☰");
+        menu.setPopupSide(javafx.geometry.Side.BOTTOM);
+        menu.getItems().addAll(dataEntry, assets, accounts, refresh);
+        decorateMenuItems();
+        getChildren().add(menu);
     }
 
     public void onDataEntry(Runnable task) {
@@ -39,6 +41,13 @@ public final class DashboardQuickLinksCard extends SectionCard {
 
     public void setRefreshDisabled(boolean disabled) {
         refresh.setDisable(disabled);
+    }
+
+    private void decorateMenuItems() {
+        dataEntry.setGraphic(Ui.style(new javafx.scene.shape.SVGPath(), "menu-icon", "icon-entry"));
+        assets.setGraphic(Ui.style(new javafx.scene.shape.SVGPath(), "menu-icon", "icon-assets"));
+        accounts.setGraphic(Ui.style(new javafx.scene.shape.SVGPath(), "menu-icon", "icon-accounts"));
+        refresh.setGraphic(Ui.style(new javafx.scene.shape.SVGPath(), "menu-icon", "icon-refresh"));
     }
 
     private void execute(Runnable task) {
