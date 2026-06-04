@@ -8,19 +8,19 @@ import org.junit.jupiter.api.Test;
 class DashboardTimeStepTest {
 
     @Test
-    void storesDisplayCodeAndBackendBucketSeparately() {
-        DashboardTimeStep step = DashboardTimeStep.of("1y", "Année", "12m", "Annual display step", false);
+    void storesDisplayCodeAndBackendBucketSeparatelyWhenNeeded() {
+        DashboardTimeStep step = DashboardTimeStep.of("1y", "Année", "1y", "Annual display step", false);
 
         assertEquals("1y", step.code());
-        assertEquals("12m", step.apiBucket());
+        assertEquals("1y", step.apiBucket());
         assertEquals("Année", step.toString());
     }
 
     @Test
-    void supportsFinerThanDayPresetsForFutureGranularity() {
-        DashboardTimeStep step = DashboardTimeStep.of("1s", "Seconde", "1d", "Daily fallback", true);
+    void supportsFinerThanDayPresetsAsRealBackendBuckets() {
+        DashboardTimeStep step = DashboardTimeStep.of("1s", "Seconde", "1s", "Second-level bucket", true);
 
         assertTrue(step.finerThanDay());
-        assertEquals("1d", step.apiBucket());
+        assertEquals("1s", step.apiBucket());
     }
 }
