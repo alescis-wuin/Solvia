@@ -62,8 +62,45 @@ class CalculationControllerTest {
                         .param("aggregation", "last")
                         .param("currency", "EUR"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].valueDate").value("2026-06-01T00:00:00"))
                 .andExpect(jsonPath("$[0].value.amount").value(1700))
                 .andExpect(jsonPath("$[3].value.amount").value(2300));
+    }
+
+    @Test
+    void returnsHourlyNetWorthSeries() throws Exception {
+        CalculationDataLoader dataLoader = mock(CalculationDataLoader.class);
+        when(dataLoader.load()).thenReturn(data());
+        MockMvc mvc = MockMvcSupport.standaloneMvc(new CalculationController(dataLoader));
+
+        mvc.perform(get("/api/net-worth/series")
+                        .param("from", "2026-06-10")
+                        .param("to", "2026-06-10")
+                        .param("bucket", "1h")
+                        .param("aggregation", "last")
+                        .param("currency", "EUR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].valueDate").value("2026-06-10T00:00:00"))
+                .andExpect(jsonPath("$[1].valueDate").value("2026-06-10T01:00:00"))
+                .andExpect(jsonPath("$[23].value.amount").value(2300));
+    }
+
+    @Test
+    void returnsSecondNetWorthSeriesWhenPointLimitAllowsIt() throws Exception {
+        CalculationDataLoader dataLoader = mock(CalculationDataLoader.class);
+        when(dataLoader.load()).thenReturn(data());
+        MockMvc mvc = MockMvcSupport.standaloneMvc(new CalculationController(dataLoader));
+
+        mvc.perform(get("/api/net-worth/series")
+                        .param("from", "2026-06-10")
+                        .param("to", "2026-06-10")
+                        .param("bucket", "1s")
+                        .param("aggregation", "last")
+                        .param("currency", "EUR")
+                        .param("maxPoints", "86400"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].valueDate").value("2026-06-10T00:00:00"))
+                .andExpect(jsonPath("$[1].valueDate").value("2026-06-10T00:00:01"));
     }
 
     @Test
