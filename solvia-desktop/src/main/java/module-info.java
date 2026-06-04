@@ -1,5 +1,6 @@
 module fr.seynax.solvia.desktop {
     requires java.net.http;
+    requires java.prefs;
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.datatype.jsr310;
