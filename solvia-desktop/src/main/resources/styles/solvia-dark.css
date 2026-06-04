@@ -6,6 +6,9 @@
     -solvia-text: #f3f8ff;
     -solvia-muted: #b9c9de;
     -solvia-accent: #72f2c5;
+    -solvia-warning: #ffd166;
+    -solvia-danger: #ff8a8a;
+    -solvia-info: #9cc9ff;
     -fx-background-color: -solvia-bg;
     -fx-font-family: "Luciole", "Noto Sans", "System";
     -fx-font-size: 16px;
@@ -23,6 +26,32 @@
 }
 .header, .footer, .card, .form-card { -fx-padding: 18px; }
 .sidebar { -fx-padding: 22px 14px; }
+.status-banner {
+    -fx-background-color: -solvia-surface;
+    -fx-border-color: -solvia-border;
+    -fx-border-width: 1px;
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+    -fx-padding: 14px 18px;
+    -fx-spacing: 8px;
+}
+.status-banner.status-checking { -fx-border-color: -solvia-info; }
+.status-banner.status-connected { -fx-border-color: -solvia-accent; }
+.status-banner.status-degraded { -fx-border-color: -solvia-warning; }
+.status-banner.status-unavailable, .status-banner.status-error { -fx-border-color: -solvia-danger; }
+.status-state {
+    -fx-font-weight: 900;
+    -fx-padding: 4px 10px;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+}
+.status-checking .status-state { -fx-text-fill: -solvia-info; -fx-border-color: -solvia-info; }
+.status-connected .status-state { -fx-text-fill: -solvia-accent; -fx-border-color: -solvia-accent; }
+.status-degraded .status-state { -fx-text-fill: -solvia-warning; -fx-border-color: -solvia-warning; }
+.status-unavailable .status-state, .status-error .status-state { -fx-text-fill: -solvia-danger; -fx-border-color: -solvia-danger; }
+.status-message { -fx-font-weight: 700; }
+.backend-url-field { -fx-pref-width: 320px; }
 .metric-value, .monospace, .text-field, .combo-box, .date-picker, .table-cell {
     -fx-font-family: "Hack", "Noto Sans Mono", "monospace";
 }
