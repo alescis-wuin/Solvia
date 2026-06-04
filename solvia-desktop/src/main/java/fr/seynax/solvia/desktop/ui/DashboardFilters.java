@@ -15,6 +15,8 @@ public final class DashboardFilters extends VBox {
     private final DashboardTimeStepSelector stepSelector = new DashboardTimeStepSelector();
     private final ComboBox<String> aggregation = Ui.tooltip(new ComboBox<>(), "Mode d'agrégation du graphique.");
     private final Button refresh = Ui.tooltip(new Button("↻"), "Recharge le dashboard.");
+    private Runnable refreshAction = () -> { };
+    private boolean refreshDisabled = true;
 
     public DashboardFilters() {
         getStyleClass().add("dashboard-filters");
@@ -23,6 +25,11 @@ public final class DashboardFilters extends VBox {
         aggregation.setValue("last");
         refresh.getStyleClass().addAll("icon-button", "icon-refresh");
         refresh.setDisable(true);
+
+        stepSelector.onChanged(this::autoRefresh);
+        from.valueProperty().addListener((observable, previous, value) -> autoRefresh());
+        to.valueProperty().addListener((observable, previous, value) -> autoRefresh());
+        aggregation.valueProperty().addListener((observable, previous, value) -> autoRefresh());
 
         HBox row = Ui.style(new HBox(12,
                 Ui.fieldLabel("Du", from), from,
@@ -58,12 +65,20 @@ public final class DashboardFilters extends VBox {
     }
 
     public void onRefresh(Runnable action) {
-        refresh.setOnAction(event -> action.run());
+        refreshAction = action == null ? () -> { } : action;
+        refresh.setOnAction(event -> refreshAction.run());
     }
 
     public void setRefreshDisabled(boolean disabled) {
+        refreshDisabled = disabled;
         refresh.setDisable(disabled);
         stepSelector.setSelectorDisabled(disabled);
         aggregation.setDisable(disabled);
+    }
+
+    private void autoRefresh() {
+        if (!refreshDisabled) {
+            refreshAction.run();
+        }
     }
 }
