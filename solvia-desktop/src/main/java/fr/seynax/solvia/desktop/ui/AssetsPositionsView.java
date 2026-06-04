@@ -6,11 +6,13 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -46,42 +48,49 @@ public final class AssetsPositionsView extends VBox {
     private final StateMessage state = new StateMessage();
     private final EmptyState empty = new EmptyState();
 
+    private final TextField assetFilter = Ui.tooltip(new TextField(), "Filtre les actifs par nom, type, symbole, devise ou état.");
+    private final TextField positionFilter = Ui.tooltip(new TextField(), "Filtre les positions par compte, actif, type, quantité ou état.");
+    private final TextField snapshotFilter = Ui.tooltip(new TextField(), "Filtre l'historique de valorisation sélectionné.");
+
     private final TableView<AssetRow> assetTable = new TableView<>();
     private final TableView<PositionRow> positionTable = new TableView<>();
     private final TableView<SnapshotRow> snapshotTable = new TableView<>();
 
     private final TextField assetName = Ui.tooltip(new TextField(), "Nom lisible de l'actif.");
     private final ComboBox<String> assetType = Ui.tooltip(new ComboBox<>(), "Classe de l'actif.");
-    private final TextField assetCurrency = Ui.tooltip(new TextField("EUR"), "Devise ISO de cotation ou de reference.");
+    private final TextField assetCurrency = Ui.tooltip(new TextField("EUR"), "Devise ISO de cotation ou de référence.");
     private final TextField assetSymbol = Ui.tooltip(new TextField(), "Symbole optionnel, par exemple CW8, AAPL ou BTC.");
     private final Label assetTypeHelp = Ui.help("—");
-    private final Button createAsset = Ui.tooltip(new Button("Creer l'actif"), "Ajoute l'actif au referentiel local.");
-    private final Button updateAsset = Ui.tooltip(new Button("Mettre a jour"), "Modifie l'actif selectionne.");
-    private final Button deactivateAsset = Ui.tooltip(new Button("Desactiver"), "Desactive l'actif selectionne sans supprimer son historique.");
-    private final Button clearAssetSelection = Ui.tooltip(new Button("Nouveau"), "Vide la selection pour creer un nouvel actif.");
+    private final Button createAsset = Ui.tooltip(new Button("Créer l'actif"), "Ajoute l'actif au référentiel local.");
+    private final Button updateAsset = Ui.tooltip(new Button("Mettre à jour"), "Modifie l'actif sélectionné.");
+    private final Button deactivateAsset = Ui.tooltip(new Button("Désactiver"), "Désactive l'actif sélectionné sans supprimer son historique.");
+    private final Button clearAssetSelection = Ui.tooltip(new Button("Nouveau"), "Vide la sélection pour créer un nouvel actif.");
 
-    private final ComboBox<AccountDto> positionAccount = Ui.tooltip(new ComboBox<>(), "Compte ou enveloppe qui detient la position.");
-    private final ComboBox<AssetDto> positionAsset = Ui.tooltip(new ComboBox<>(), "Actif detenu dans le compte.");
-    private final TextField positionQuantity = Ui.tooltip(new TextField("0"), "Quantite initiale ou courante de la position.");
-    private final Button createPosition = Ui.tooltip(new Button("Creer la position"), "Lie un actif a un compte.");
-    private final Button updatePosition = Ui.tooltip(new Button("Mettre a jour"), "Modifie la quantite de la position selectionnee.");
-    private final Button deactivatePosition = Ui.tooltip(new Button("Desactiver"), "Desactive la position selectionnee sans supprimer son historique.");
-    private final Button clearPositionSelection = Ui.tooltip(new Button("Nouvelle"), "Vide la selection pour creer une nouvelle position.");
+    private final ComboBox<AccountDto> positionAccount = Ui.tooltip(new ComboBox<>(), "Compte ou enveloppe qui détient la position.");
+    private final ComboBox<AssetDto> positionAsset = Ui.tooltip(new ComboBox<>(), "Actif détenu dans le compte.");
+    private final TextField positionQuantity = Ui.tooltip(new TextField("0"), "Quantité initiale ou courante de la position.");
+    private final Button createPosition = Ui.tooltip(new Button("Créer la position"), "Lie un actif à un compte.");
+    private final Button updatePosition = Ui.tooltip(new Button("Mettre à jour"), "Modifie la quantité de la position sélectionnée.");
+    private final Button deactivatePosition = Ui.tooltip(new Button("Désactiver"), "Désactive la position sélectionnée sans supprimer son historique.");
+    private final Button clearPositionSelection = Ui.tooltip(new Button("Nouvelle"), "Vide la sélection pour créer une nouvelle position.");
 
-    private final ComboBox<PositionChoice> snapshotPosition = Ui.tooltip(new ComboBox<>(), "Position a valoriser.");
-    private final DatePicker snapshotDate = Ui.tooltip(new DatePicker(LocalDate.now()), "Date de valorisation observee.");
-    private final TextField snapshotQuantity = Ui.tooltip(new TextField(), "Quantite observee a cette date.");
-    private final TextField snapshotValue = Ui.tooltip(new TextField(), "Valeur de marche totale observee.");
-    private final TextField snapshotCurrency = Ui.tooltip(new TextField("EUR"), "Devise ISO de la valeur de marche.");
+    private final ComboBox<PositionChoice> snapshotPosition = Ui.tooltip(new ComboBox<>(), "Position à valoriser.");
+    private final DatePicker snapshotDate = Ui.tooltip(new DatePicker(LocalDate.now()), "Date de valorisation observée.");
+    private final TextField snapshotQuantity = Ui.tooltip(new TextField(), "Quantité observée à cette date.");
+    private final TextField snapshotValue = Ui.tooltip(new TextField(), "Valeur de marché totale observée.");
+    private final TextField snapshotCurrency = Ui.tooltip(new TextField("EUR"), "Devise ISO de la valeur de marché.");
     private final Button saveSnapshot = Ui.tooltip(new Button("Enregistrer la valorisation"), "Ajoute un snapshot de position.");
 
-    private final Label assetDetail = Ui.help("Selectionne un actif pour voir son detail.");
-    private final Label positionDetail = Ui.help("Selectionne une position pour voir son detail et son historique.");
+    private final Label assetDetail = Ui.help("Sélectionne un actif pour voir son détail.");
+    private final Label positionDetail = Ui.help("Sélectionne une position pour voir son détail et son historique.");
 
     private volatile boolean backendReady;
     private WorkspaceData currentData = WorkspaceData.empty();
+    private List<PositionSnapshotDto> currentSnapshots = List.of();
     private AssetDto selectedAsset;
     private PositionDto selectedPosition;
+    private boolean positionSnapshotCorrectionMode;
+    private UUID correctingPositionSnapshotId;
     private Runnable onPortfolioDataChanged = () -> { };
 
     public AssetsPositionsView(SolviaApiClient apiClient) {
@@ -91,9 +100,12 @@ public final class AssetsPositionsView extends VBox {
         setPadding(new Insets(20));
         configureCombos();
         configureTables();
+        assetFilter.textProperty().addListener((observable, previous, value) -> renderAssets());
+        positionFilter.textProperty().addListener((observable, previous, value) -> renderPositions());
+        snapshotFilter.textProperty().addListener((observable, previous, value) -> renderSnapshotHistory());
         getChildren().addAll(forms(), tables(), details(), state, empty);
         setInputsDisabled(true);
-        state.show("Verification", "Verification du backend local...", "state-info");
+        state.show("Vérification", "Vérification du backend local...", "state-info");
     }
 
     public void setOnPortfolioDataChanged(Runnable onPortfolioDataChanged) {
@@ -104,14 +116,14 @@ public final class AssetsPositionsView extends VBox {
         backendReady = snapshot.canLoadData();
         if (snapshot.state() == BackendConnectionState.CHECKING) {
             setInputsDisabled(true);
-            state.show("Verification", "Verification du backend local...", "state-info");
+            state.show("Vérification", "Vérification du backend local...", "state-info");
             return;
         }
         if (!backendReady) {
             setInputsDisabled(true);
             clearData();
-            empty.show("Backend indisponible", "Les actifs et positions seront disponibles quand le backend local sera connecte.");
-            state.show("Backend non pret", snapshot.message(), "state-warning");
+            empty.show("Backend indisponible", "Les actifs et positions seront disponibles quand le backend local sera connecté.");
+            state.show("Backend non prêt", snapshot.message(), "state-warning");
             return;
         }
         setInputsDisabled(false);
@@ -120,7 +132,7 @@ public final class AssetsPositionsView extends VBox {
 
     public void refresh() {
         if (!backendReady) {
-            state.show("Backend non pret", "Backend local non pret.", "state-warning");
+            state.show("Backend non prêt", "Backend local non prêt.", "state-warning");
             return;
         }
         empty.hide();
@@ -173,7 +185,7 @@ public final class AssetsPositionsView extends VBox {
         grid.add(assetSymbol, 1, 3);
         grid.add(assetTypeHelp, 0, 4, 2, 1);
         grid.add(new HBox(8, createAsset, updateAsset, deactivateAsset, clearAssetSelection), 0, 5, 2, 1);
-        return new SectionCard("Actif", "Cree ou modifie un actif suivi par Solvia.", grid);
+        return new SectionCard("Actif", "Crée ou modifie un actif suivi par Solvia.", grid);
     }
 
     private SectionCard positionForm() {
@@ -188,10 +200,10 @@ public final class AssetsPositionsView extends VBox {
         grid.add(positionAccount, 1, 0);
         grid.add(Ui.fieldLabel("Actif", positionAsset), 0, 1);
         grid.add(positionAsset, 1, 1);
-        grid.add(Ui.fieldLabel("Quantite", positionQuantity), 0, 2);
+        grid.add(Ui.fieldLabel("Quantité", positionQuantity), 0, 2);
         grid.add(positionQuantity, 1, 2);
         grid.add(new HBox(8, createPosition, updatePosition, deactivatePosition, clearPositionSelection), 0, 3, 2, 1);
-        return new SectionCard("Position", "Associe un actif a un compte, puis maintiens sa quantite courante.", grid);
+        return new SectionCard("Position", "Associe un actif à un compte, puis maintiens sa quantité courante.", grid);
     }
 
     private SectionCard snapshotForm() {
@@ -203,34 +215,37 @@ public final class AssetsPositionsView extends VBox {
         grid.add(snapshotPosition, 1, 0);
         grid.add(Ui.fieldLabel("Date", snapshotDate), 0, 1);
         grid.add(snapshotDate, 1, 1);
-        grid.add(Ui.fieldLabel("Quantite", snapshotQuantity), 0, 2);
+        grid.add(Ui.fieldLabel("Quantité", snapshotQuantity), 0, 2);
         grid.add(snapshotQuantity, 1, 2);
         grid.add(Ui.fieldLabel("Valeur", snapshotValue), 0, 3);
         grid.add(snapshotValue, 1, 3);
         grid.add(Ui.fieldLabel("Devise", snapshotCurrency), 0, 4);
         grid.add(snapshotCurrency, 1, 4);
         grid.add(saveSnapshot, 1, 5);
-        return new SectionCard("Valorisation", "Saisis la quantite et la valeur totale observees pour une position.", grid);
+        return new SectionCard("Valorisation", "Une correction crée un nouveau snapshot de position, sans modifier l'ancien.", grid);
     }
 
     private SectionCard assetsTable() {
-        return new SectionCard("Actifs suivis", "Selectionne une ligne pour afficher et modifier l'actif.", assetTable);
+        VBox content = new VBox(10, assetFilter, assetTable);
+        return new SectionCard("Actifs suivis", "Liste filtrable avec actions inline.", content);
     }
 
     private SectionCard positionsTable() {
-        return new SectionCard("Positions", "Selectionne une ligne pour afficher, modifier et consulter l'historique.", positionTable);
+        VBox content = new VBox(10, positionFilter, positionTable);
+        return new SectionCard("Positions", "Liste filtrable avec actions inline.", content);
     }
 
     private SectionCard assetDetailCard() {
-        return new SectionCard("Detail actif", assetDetail);
+        return new SectionCard("Détail actif", assetDetail);
     }
 
     private SectionCard positionDetailCard() {
-        return new SectionCard("Detail position", positionDetail);
+        return new SectionCard("Détail position", positionDetail);
     }
 
     private SectionCard snapshotHistoryCard() {
-        return new SectionCard("Historique de valorisation", "Snapshots de la position selectionnee.", snapshotTable);
+        VBox content = new VBox(10, snapshotFilter, snapshotTable);
+        return new SectionCard("Historique de valorisation", "Snapshots filtrables de la position sélectionnée.", content);
     }
 
     private void configureTables() {
@@ -240,9 +255,11 @@ public final class AssetsPositionsView extends VBox {
         assetTypeColumn.setCellValueFactory(new PropertyValueFactory<>("type"));
         TableColumn<AssetRow, String> assetCurrencyColumn = new TableColumn<>("Devise");
         assetCurrencyColumn.setCellValueFactory(new PropertyValueFactory<>("currency"));
-        TableColumn<AssetRow, String> assetStatusColumn = new TableColumn<>("Etat");
+        TableColumn<AssetRow, String> assetStatusColumn = new TableColumn<>("État");
         assetStatusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
-        assetTable.getColumns().setAll(assetNameColumn, assetTypeColumn, assetCurrencyColumn, assetStatusColumn);
+        TableColumn<AssetRow, HBox> assetActionsColumn = new TableColumn<>("Actions");
+        assetActionsColumn.setCellValueFactory(data -> new SimpleObjectProperty<>(assetActions(data.getValue())));
+        assetTable.getColumns().setAll(assetNameColumn, assetTypeColumn, assetCurrencyColumn, assetStatusColumn, assetActionsColumn);
         assetTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         assetTable.setPrefHeight(260);
         assetTable.getSelectionModel().selectedItemProperty().addListener((observable, previous, selected) -> selectAsset(selected == null ? null : selected.asset()));
@@ -253,26 +270,60 @@ public final class AssetsPositionsView extends VBox {
         asset.setCellValueFactory(new PropertyValueFactory<>("asset"));
         TableColumn<PositionRow, String> type = new TableColumn<>("Type");
         type.setCellValueFactory(new PropertyValueFactory<>("type"));
-        TableColumn<PositionRow, String> quantity = new TableColumn<>("Quantite");
+        TableColumn<PositionRow, String> quantity = new TableColumn<>("Quantité");
         quantity.setCellValueFactory(new PropertyValueFactory<>("quantity"));
-        TableColumn<PositionRow, String> status = new TableColumn<>("Etat");
+        TableColumn<PositionRow, String> status = new TableColumn<>("État");
         status.setCellValueFactory(new PropertyValueFactory<>("status"));
-        positionTable.getColumns().setAll(account, asset, type, quantity, status);
+        TableColumn<PositionRow, HBox> positionActionsColumn = new TableColumn<>("Actions");
+        positionActionsColumn.setCellValueFactory(data -> new SimpleObjectProperty<>(positionActions(data.getValue())));
+        positionTable.getColumns().setAll(account, asset, type, quantity, status, positionActionsColumn);
         positionTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         positionTable.setPrefHeight(260);
         positionTable.getSelectionModel().selectedItemProperty().addListener((observable, previous, selected) -> selectPosition(selected == null ? null : selected.position()));
 
         TableColumn<SnapshotRow, String> date = new TableColumn<>("Date");
         date.setCellValueFactory(new PropertyValueFactory<>("date"));
-        TableColumn<SnapshotRow, String> snapshotQuantityColumn = new TableColumn<>("Quantite");
+        TableColumn<SnapshotRow, String> snapshotQuantityColumn = new TableColumn<>("Quantité");
         snapshotQuantityColumn.setCellValueFactory(new PropertyValueFactory<>("quantity"));
         TableColumn<SnapshotRow, String> marketValue = new TableColumn<>("Valeur");
         marketValue.setCellValueFactory(new PropertyValueFactory<>("marketValue"));
         TableColumn<SnapshotRow, String> confidence = new TableColumn<>("Confiance");
         confidence.setCellValueFactory(new PropertyValueFactory<>("confidence"));
-        snapshotTable.getColumns().setAll(date, snapshotQuantityColumn, marketValue, confidence);
+        TableColumn<SnapshotRow, HBox> snapshotActionsColumn = new TableColumn<>("Actions");
+        snapshotActionsColumn.setCellValueFactory(data -> new SimpleObjectProperty<>(snapshotActions(data.getValue())));
+        snapshotTable.getColumns().setAll(date, snapshotQuantityColumn, marketValue, confidence, snapshotActionsColumn);
         snapshotTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         snapshotTable.setPrefHeight(220);
+    }
+
+    private HBox assetActions(AssetRow row) {
+        Button open = Ui.tooltip(new Button("Ouvrir"), "Sélectionne cet actif.");
+        open.setOnAction(event -> assetTable.getSelectionModel().select(row));
+        Button disable = Ui.tooltip(new Button("Désactiver"), "Désactive cet actif après confirmation.");
+        disable.setDisable(!row.asset().active());
+        disable.setOnAction(event -> {
+            assetTable.getSelectionModel().select(row);
+            deactivateAsset();
+        });
+        return new HBox(6, open, disable);
+    }
+
+    private HBox positionActions(PositionRow row) {
+        Button open = Ui.tooltip(new Button("Ouvrir"), "Sélectionne cette position.");
+        open.setOnAction(event -> positionTable.getSelectionModel().select(row));
+        Button disable = Ui.tooltip(new Button("Désactiver"), "Désactive cette position après confirmation.");
+        disable.setDisable(!row.position().active());
+        disable.setOnAction(event -> {
+            positionTable.getSelectionModel().select(row);
+            deactivatePosition();
+        });
+        return new HBox(6, open, disable);
+    }
+
+    private HBox snapshotActions(SnapshotRow row) {
+        Button correct = Ui.tooltip(new Button("Corriger"), "Prépare une correction append-only de ce snapshot.");
+        correct.setOnAction(event -> preparePositionSnapshotCorrection(row.snapshot()));
+        return new HBox(6, correct);
     }
 
     private CompletableFuture<WorkspaceData> loadWorkspaceData() {
@@ -299,30 +350,68 @@ public final class AssetsPositionsView extends VBox {
         UUID previousAssetId = selectedAsset == null ? null : selectedAsset.id();
         UUID previousPositionId = selectedPosition == null ? null : selectedPosition.id();
         currentData = data;
-        Map<UUID, AccountDto> accountsById = data.accountsById();
-        Map<UUID, AssetDto> assetsById = data.assetsById();
-        assetTable.getItems().setAll(data.assets().stream().map(AssetRow::from).toList());
-        positionTable.getItems().setAll(data.positions().stream()
-                .map(position -> PositionRow.from(position, accountsById, assetsById))
-                .sorted(Comparator.comparing(PositionRow::getAccount).thenComparing(PositionRow::getAsset))
-                .toList());
+        renderAssets();
+        renderPositions();
         positionAccount.getItems().setAll(data.accounts());
         positionAsset.getItems().setAll(data.assets());
         snapshotPosition.getItems().setAll(data.positions().stream()
-                .map(position -> PositionChoice.from(position, accountsById, assetsById))
+                .map(position -> PositionChoice.from(position, data.accountsById(), data.assetsById()))
                 .toList());
         selectFirstValues();
         reselect(previousAssetId, previousPositionId);
         if (data.accounts().isEmpty()) {
-            empty.show("Aucun compte", "Cree un compte avant d'ajouter une position.");
-            state.show("Aucun compte", "Les positions necessitent au moins un compte.", "state-warning");
+            empty.show("Aucun compte", "Crée un compte avant d'ajouter une position.");
+            state.show("Aucun compte", "Les positions nécessitent au moins un compte.", "state-warning");
         } else if (data.assets().isEmpty()) {
-            empty.show("Aucun actif", "Cree un actif avant d'ajouter une position.");
-            state.show("Aucun actif", "Le referentiel d'actifs est vide.", "state-warning");
+            empty.show("Aucun actif", "Crée un actif avant d'ajouter une position.");
+            state.show("Aucun actif", "Le référentiel d'actifs est vide.", "state-warning");
         } else {
             empty.hide();
-            state.show("Donnees chargees", "Actifs: " + data.assets().size() + " / Positions: " + data.positions().size(), "state-success");
+            state.show("Données chargées", "Actifs: " + data.assets().size() + " / Positions: " + data.positions().size(), "state-success");
         }
+    }
+
+    private void renderAssets() {
+        String query = normalized(assetFilter.getText());
+        assetTable.getItems().setAll(currentData.assets().stream()
+                .filter(asset -> query.isBlank()
+                        || normalized(asset.name()).contains(query)
+                        || normalized(asset.type()).contains(query)
+                        || normalized(DesktopFormatters.assetType(asset.type())).contains(query)
+                        || normalized(asset.currencyCode()).contains(query)
+                        || normalized(asset.symbol()).contains(query)
+                        || normalized(status(asset.active())).contains(query))
+                .map(AssetRow::from)
+                .toList());
+    }
+
+    private void renderPositions() {
+        String query = normalized(positionFilter.getText());
+        Map<UUID, AccountDto> accountsById = currentData.accountsById();
+        Map<UUID, AssetDto> assetsById = currentData.assetsById();
+        positionTable.getItems().setAll(currentData.positions().stream()
+                .map(position -> PositionRow.from(position, accountsById, assetsById))
+                .filter(row -> query.isBlank()
+                        || normalized(row.getAccount()).contains(query)
+                        || normalized(row.getAsset()).contains(query)
+                        || normalized(row.getType()).contains(query)
+                        || normalized(row.getQuantity()).contains(query)
+                        || normalized(row.getStatus()).contains(query))
+                .sorted(Comparator.comparing(PositionRow::getAccount).thenComparing(PositionRow::getAsset))
+                .toList());
+    }
+
+    private void renderSnapshotHistory() {
+        String query = normalized(snapshotFilter.getText());
+        snapshotTable.getItems().setAll(currentSnapshots.stream()
+                .filter(snapshot -> query.isBlank()
+                        || DesktopFormatters.date(snapshot.valueDate()).toLowerCase(Locale.ROOT).contains(query)
+                        || DesktopFormatters.decimal(snapshot.quantity()).toLowerCase(Locale.ROOT).contains(query)
+                        || DesktopFormatters.money(snapshot.marketValue()).toLowerCase(Locale.ROOT).contains(query)
+                        || normalized(snapshot.confidence()).contains(query))
+                .sorted(Comparator.comparing(PositionSnapshotDto::valueDate).reversed())
+                .map(SnapshotRow::from)
+                .toList());
     }
 
     private void createAsset() {
@@ -331,7 +420,7 @@ public final class AssetsPositionsView extends VBox {
             return;
         }
         createAsset.setDisable(true);
-        state.show("Enregistrement", "Creation de l'actif...", "state-info");
+        state.show("Enregistrement", "Création de l'actif...", "state-info");
         apiClient.createAsset(request).whenComplete((asset, error) -> Platform.runLater(() -> {
             createAsset.setDisable(false);
             if (error != null) {
@@ -339,14 +428,15 @@ public final class AssetsPositionsView extends VBox {
                 return;
             }
             clearSelectedAsset();
-            state.show("Actif cree", asset.name() + " a ete ajoute.", "state-success");
+            state.show("Actif créé", asset.name() + " a été ajouté.", "state-success");
             refresh();
+            onPortfolioDataChanged.run();
         }));
     }
 
     private void updateAsset() {
         if (selectedAsset == null) {
-            state.show("Selection requise", "Selectionner un actif avant modification.", "state-warning");
+            state.show("Sélection requise", "Sélectionner un actif avant modification.", "state-warning");
             return;
         }
         AssetUpdateDto request = readAssetUpdateRequest(selectedAsset.active());
@@ -354,7 +444,7 @@ public final class AssetsPositionsView extends VBox {
             return;
         }
         updateAsset.setDisable(true);
-        state.show("Enregistrement", "Mise a jour de l'actif...", "state-info");
+        state.show("Enregistrement", "Mise à jour de l'actif...", "state-info");
         apiClient.updateAsset(selectedAsset.id(), request).whenComplete((asset, error) -> Platform.runLater(() -> {
             updateAsset.setDisable(false);
             if (error != null) {
@@ -362,18 +452,22 @@ public final class AssetsPositionsView extends VBox {
                 return;
             }
             selectedAsset = asset;
-            state.show("Actif mis a jour", asset.name() + " a ete modifie.", "state-success");
+            state.show("Actif mis à jour", asset.name() + " a été modifié.", "state-success");
             refresh();
+            onPortfolioDataChanged.run();
         }));
     }
 
     private void deactivateAsset() {
         if (selectedAsset == null) {
-            state.show("Selection requise", "Selectionner un actif avant desactivation.", "state-warning");
+            state.show("Sélection requise", "Sélectionner un actif avant désactivation.", "state-warning");
+            return;
+        }
+        if (!Ui.confirm("Désactiver l'actif", "Désactiver « " + selectedAsset.name() + " » ?", "L'actif ne sera pas supprimé. L'historique des positions restera disponible.")) {
             return;
         }
         deactivateAsset.setDisable(true);
-        state.show("Desactivation", "Desactivation de l'actif...", "state-info");
+        state.show("Désactivation", "Désactivation de l'actif...", "state-info");
         apiClient.deactivateAsset(selectedAsset.id()).whenComplete((ignored, error) -> Platform.runLater(() -> {
             deactivateAsset.setDisable(false);
             if (error != null) {
@@ -381,8 +475,9 @@ public final class AssetsPositionsView extends VBox {
                 return;
             }
             clearSelectedAsset();
-            state.show("Actif desactive", "L'actif reste conserve dans l'historique.", "state-success");
+            state.show("Actif désactivé", "L'actif reste conservé dans l'historique.", "state-success");
             refresh();
+            onPortfolioDataChanged.run();
         }));
     }
 
@@ -390,21 +485,21 @@ public final class AssetsPositionsView extends VBox {
         AccountDto account = positionAccount.getValue();
         AssetDto asset = positionAsset.getValue();
         if (account == null || asset == null) {
-            state.show("Selection requise", "Selectionner un compte et un actif.", "state-warning");
+            state.show("Sélection requise", "Sélectionner un compte et un actif.", "state-warning");
             return;
         }
         if (hasActiveDuplicatePosition(account.id(), asset.id())) {
-            state.show("Position existante", "Une position active existe deja pour ce compte et cet actif.", "state-warning");
+            state.show("Position existante", "Une position active existe déjà pour ce compte et cet actif.", "state-warning");
             return;
         }
-        ValidationResult<BigDecimal> quantity = zeroOrPositive(positionQuantity.getText(), "Quantite");
+        ValidationResult<BigDecimal> quantity = zeroOrPositive(positionQuantity.getText(), "Quantité");
         if (!quantity.valid()) {
-            state.show("Quantite invalide", quantity.message(), "state-warning");
+            state.show("Quantité invalide", quantity.message(), "state-warning");
             return;
         }
         PositionCreateDto request = new PositionCreateDto(account.id(), asset.id(), quantity.value());
         createPosition.setDisable(true);
-        state.show("Enregistrement", "Creation de la position...", "state-info");
+        state.show("Enregistrement", "Création de la position...", "state-info");
         apiClient.createPosition(request).whenComplete((position, error) -> Platform.runLater(() -> {
             createPosition.setDisable(false);
             if (error != null) {
@@ -413,24 +508,25 @@ public final class AssetsPositionsView extends VBox {
             }
             selectedPosition = position;
             positionQuantity.setText("0");
-            state.show("Position creee", "La position a ete ajoutee.", "state-success");
+            state.show("Position créée", "La position a été ajoutée.", "state-success");
             refresh();
+            onPortfolioDataChanged.run();
         }));
     }
 
     private void updatePosition() {
         if (selectedPosition == null) {
-            state.show("Selection requise", "Selectionner une position avant modification.", "state-warning");
+            state.show("Sélection requise", "Sélectionner une position avant modification.", "state-warning");
             return;
         }
-        ValidationResult<BigDecimal> quantity = zeroOrPositive(positionQuantity.getText(), "Quantite");
+        ValidationResult<BigDecimal> quantity = zeroOrPositive(positionQuantity.getText(), "Quantité");
         if (!quantity.valid()) {
-            state.show("Quantite invalide", quantity.message(), "state-warning");
+            state.show("Quantité invalide", quantity.message(), "state-warning");
             return;
         }
         PositionUpdateDto request = new PositionUpdateDto(quantity.value(), selectedPosition.active());
         updatePosition.setDisable(true);
-        state.show("Enregistrement", "Mise a jour de la position...", "state-info");
+        state.show("Enregistrement", "Mise à jour de la position...", "state-info");
         apiClient.updatePosition(selectedPosition.id(), request).whenComplete((position, error) -> Platform.runLater(() -> {
             updatePosition.setDisable(false);
             if (error != null) {
@@ -438,18 +534,22 @@ public final class AssetsPositionsView extends VBox {
                 return;
             }
             selectedPosition = position;
-            state.show("Position mise a jour", "La quantite courante a ete modifiee.", "state-success");
+            state.show("Position mise à jour", "La quantité courante a été modifiée.", "state-success");
             refresh();
+            onPortfolioDataChanged.run();
         }));
     }
 
     private void deactivatePosition() {
         if (selectedPosition == null) {
-            state.show("Selection requise", "Selectionner une position avant desactivation.", "state-warning");
+            state.show("Sélection requise", "Sélectionner une position avant désactivation.", "state-warning");
+            return;
+        }
+        if (!Ui.confirm("Désactiver la position", "Désactiver cette position ?", "La position ne sera pas supprimée. Ses snapshots resteront disponibles dans l'historique.")) {
             return;
         }
         deactivatePosition.setDisable(true);
-        state.show("Desactivation", "Desactivation de la position...", "state-info");
+        state.show("Désactivation", "Désactivation de la position...", "state-info");
         apiClient.deactivatePosition(selectedPosition.id()).whenComplete((ignored, error) -> Platform.runLater(() -> {
             deactivatePosition.setDisable(false);
             if (error != null) {
@@ -457,7 +557,7 @@ public final class AssetsPositionsView extends VBox {
                 return;
             }
             clearSelectedPosition();
-            state.show("Position desactivee", "La position reste conservee dans l'historique.", "state-success");
+            state.show("Position désactivée", "La position reste conservée dans l'historique.", "state-success");
             refresh();
             onPortfolioDataChanged.run();
         }));
@@ -466,15 +566,15 @@ public final class AssetsPositionsView extends VBox {
     private void savePositionSnapshot() {
         PositionChoice position = snapshotPosition.getValue();
         if (position == null) {
-            state.show("Position requise", "Creer ou selectionner une position avant la valorisation.", "state-warning");
+            state.show("Position requise", "Créer ou sélectionner une position avant la valorisation.", "state-warning");
             return;
         }
-        ValidationResult<BigDecimal> quantity = zeroOrPositive(snapshotQuantity.getText(), "Quantite");
+        ValidationResult<BigDecimal> quantity = zeroOrPositive(snapshotQuantity.getText(), "Quantité");
         if (!quantity.valid()) {
-            state.show("Quantite invalide", quantity.message(), "state-warning");
+            state.show("Quantité invalide", quantity.message(), "state-warning");
             return;
         }
-        ValidationResult<BigDecimal> value = zeroOrPositive(snapshotValue.getText(), "Valeur de marche");
+        ValidationResult<BigDecimal> value = zeroOrPositive(snapshotValue.getText(), "Valeur de marché");
         if (!value.valid()) {
             state.show("Valeur invalide", value.message(), "state-warning");
             return;
@@ -484,14 +584,12 @@ public final class AssetsPositionsView extends VBox {
             state.show("Devise invalide", currency.message(), "state-warning");
             return;
         }
+        boolean duplicateDate = currentSnapshots.stream().anyMatch(snapshot -> snapshot.valueDate().equals(snapshotDate.getValue()));
+        if (duplicateDate && !positionSnapshotCorrectionMode && !Ui.confirm("Créer une correction", "Un snapshot existe déjà pour cette date.", "Solvia va créer un nouveau snapshot à la même date. Le plus récent par date de saisie sera utilisé par les calculs.")) {
+            return;
+        }
         snapshotCurrency.setText(currency.value());
-        PositionSnapshotCreateDto request = new PositionSnapshotCreateDto(
-                position.position().id(),
-                snapshotDate.getValue(),
-                quantity.value(),
-                new MoneyDto(value.value(), currency.value()),
-                "OBSERVED"
-        );
+        PositionSnapshotCreateDto request = new PositionSnapshotCreateDto(position.position().id(), snapshotDate.getValue(), quantity.value(), new MoneyDto(value.value(), currency.value()), "OBSERVED");
         saveSnapshot.setDisable(true);
         state.show("Enregistrement", "Enregistrement de la valorisation...", "state-info");
         apiClient.createPositionSnapshot(request).whenComplete((ignored, error) -> Platform.runLater(() -> {
@@ -502,11 +600,31 @@ public final class AssetsPositionsView extends VBox {
             }
             snapshotQuantity.clear();
             snapshotValue.clear();
-            state.show("Valorisation enregistree", "Le snapshot de position a ete ajoute.", "state-success");
+            positionSnapshotCorrectionMode = false;
+            correctingPositionSnapshotId = null;
+            saveSnapshot.setText("Enregistrer la valorisation");
+            state.show("Valorisation enregistrée", "Le snapshot de position a été ajouté.", "state-success");
             loadSnapshotHistory(position.position().id());
             refresh();
             onPortfolioDataChanged.run();
         }));
+    }
+
+    private void preparePositionSnapshotCorrection(PositionSnapshotDto snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+        if (!Ui.confirm("Corriger une valorisation", "Préparer une correction append-only ?", "Le snapshot source ne sera pas modifié. Un nouveau snapshot sera créé à la même date.")) {
+            return;
+        }
+        snapshotDate.setValue(snapshot.valueDate());
+        snapshotQuantity.setText(snapshot.quantity() == null ? "" : snapshot.quantity().toPlainString());
+        snapshotValue.setText(snapshot.marketValue() == null || snapshot.marketValue().amount() == null ? "" : snapshot.marketValue().amount().toPlainString());
+        snapshotCurrency.setText(snapshot.marketValue() == null ? "EUR" : snapshot.marketValue().currencyCode());
+        positionSnapshotCorrectionMode = true;
+        correctingPositionSnapshotId = snapshot.id();
+        saveSnapshot.setText("Enregistrer la correction");
+        state.show("Correction préparée", "Modifie les valeurs puis enregistre une nouvelle valorisation historisée.", "state-info");
     }
 
     private AssetCreateDto readAssetCreateRequest() {
@@ -533,7 +651,8 @@ public final class AssetsPositionsView extends VBox {
         selectedAsset = asset;
         if (asset == null) {
             clearAssetForm();
-            assetDetail.setText("Selectionne un actif pour voir son detail.");
+            assetDetail.setText("Sélectionne un actif pour voir son détail.");
+            setInputsDisabled(!backendReady);
             return;
         }
         assetName.setText(asset.name());
@@ -544,15 +663,18 @@ public final class AssetsPositionsView extends VBox {
                 + "\nType: " + DesktopFormatters.assetType(asset.type())
                 + "\nDevise: " + asset.currencyCode()
                 + "\nSymbole: " + (asset.symbol() == null || asset.symbol().isBlank() ? "—" : asset.symbol())
-                + "\nEtat: " + status(asset.active())
-                + "\nCreation: " + DesktopFormatters.time(asset.createdAt()));
+                + "\nÉtat: " + status(asset.active())
+                + "\nCréation: " + DesktopFormatters.time(asset.createdAt()));
+        setInputsDisabled(!backendReady);
     }
 
     private void selectPosition(PositionDto position) {
         selectedPosition = position;
         if (position == null) {
-            positionDetail.setText("Selectionne une position pour voir son detail et son historique.");
-            snapshotTable.getItems().clear();
+            positionDetail.setText("Sélectionne une position pour voir son détail et son historique.");
+            currentSnapshots = List.of();
+            renderSnapshotHistory();
+            setInputsDisabled(!backendReady);
             return;
         }
         AccountDto account = currentData.accountsById().get(position.accountId());
@@ -567,23 +689,23 @@ public final class AssetsPositionsView extends VBox {
         positionDetail.setText("Compte: " + (account == null ? position.accountId() : account.name())
                 + "\nActif: " + (asset == null ? position.assetId() : asset.name())
                 + "\nType: " + (asset == null ? "—" : DesktopFormatters.assetType(asset.type()))
-                + "\nQuantite: " + DesktopFormatters.decimal(position.quantity())
-                + "\nEtat: " + status(position.active())
-                + "\nCreation: " + DesktopFormatters.time(position.createdAt()));
+                + "\nQuantité: " + DesktopFormatters.decimal(position.quantity())
+                + "\nÉtat: " + status(position.active())
+                + "\nCréation: " + DesktopFormatters.time(position.createdAt()));
+        setInputsDisabled(!backendReady);
         loadSnapshotHistory(position.id());
     }
 
     private void loadSnapshotHistory(UUID positionId) {
-        snapshotTable.getItems().clear();
+        currentSnapshots = List.of();
+        renderSnapshotHistory();
         apiClient.positionSnapshots(positionId).whenComplete((snapshots, error) -> Platform.runLater(() -> {
             if (error != null) {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
                 return;
             }
-            snapshotTable.getItems().setAll(snapshots.stream()
-                    .sorted(Comparator.comparing(PositionSnapshotDto::valueDate).reversed())
-                    .map(SnapshotRow::from)
-                    .toList());
+            currentSnapshots = List.copyOf(snapshots);
+            renderSnapshotHistory();
         }));
     }
 
@@ -591,15 +713,18 @@ public final class AssetsPositionsView extends VBox {
         selectedAsset = null;
         assetTable.getSelectionModel().clearSelection();
         clearAssetForm();
-        assetDetail.setText("Selectionne un actif pour voir son detail.");
+        assetDetail.setText("Sélectionne un actif pour voir son détail.");
+        setInputsDisabled(!backendReady);
     }
 
     private void clearSelectedPosition() {
         selectedPosition = null;
         positionTable.getSelectionModel().clearSelection();
         positionQuantity.setText("0");
-        snapshotTable.getItems().clear();
-        positionDetail.setText("Selectionne une position pour voir son detail et son historique.");
+        currentSnapshots = List.of();
+        renderSnapshotHistory();
+        positionDetail.setText("Sélectionne une position pour voir son détail et son historique.");
+        setInputsDisabled(!backendReady);
     }
 
     private void clearAssetForm() {
@@ -621,7 +746,7 @@ public final class AssetsPositionsView extends VBox {
             return result;
         }
         if (result.value().signum() < 0) {
-            return ValidationResult.error(fieldName + " doit etre positif ou nul.");
+            return ValidationResult.error(fieldName + " doit être positif ou nul.");
         }
         return result;
     }
@@ -635,15 +760,15 @@ public final class AssetsPositionsView extends VBox {
 
     private String assetTypeHelp(String type) {
         return switch (type == null ? "" : type) {
-            case "FIAT_CURRENCY" -> "Liquidites ou devise suivie comme actif de reference.";
-            case "STOCK" -> "Action cotee detenue directement.";
+            case "FIAT_CURRENCY" -> "Liquidités ou devise suivie comme actif de référence.";
+            case "STOCK" -> "Action cotée détenue directement.";
             case "ETF" -> "Fonds indiciel ou ETF, utile pour PEA/CTO.";
-            case "BOND" -> "Obligation, fonds obligataire ou support assimile.";
-            case "CRYPTO_ASSET" -> "Crypto-actif conserve sur plateforme ou wallet.";
-            case "PRIVATE_EQUITY" -> "Actif non cote ou participation privee, souvent estimee.";
-            case "REAL_ESTATE" -> "Immobilier ou part de support immobilier valorise manuellement.";
-            case "CASHBACK_REWARD" -> "Recompense ou cashback valorise comme actif.";
-            default -> "Classe generique pour les actifs non encore categorises.";
+            case "BOND" -> "Obligation, fonds obligataire ou support assimilé.";
+            case "CRYPTO_ASSET" -> "Crypto-actif conservé sur plateforme ou wallet.";
+            case "PRIVATE_EQUITY" -> "Actif non coté ou participation privée, souvent estimée.";
+            case "REAL_ESTATE" -> "Immobilier ou part de support immobilier valorisé manuellement.";
+            case "CASHBACK_REWARD" -> "Récompense ou cashback valorisé comme actif.";
+            default -> "Classe générique pour les actifs non encore catégorisés.";
         };
     }
 
@@ -675,20 +800,23 @@ public final class AssetsPositionsView extends VBox {
     }
 
     private void setInputsDisabled(boolean disabled) {
+        assetFilter.setDisable(disabled);
+        positionFilter.setDisable(disabled);
+        snapshotFilter.setDisable(disabled);
         assetName.setDisable(disabled);
         assetType.setDisable(disabled);
         assetCurrency.setDisable(disabled);
         assetSymbol.setDisable(disabled);
         createAsset.setDisable(disabled);
         updateAsset.setDisable(disabled || selectedAsset == null);
-        deactivateAsset.setDisable(disabled || selectedAsset == null);
+        deactivateAsset.setDisable(disabled || selectedAsset == null || !selectedAsset.active());
         clearAssetSelection.setDisable(disabled);
         positionAccount.setDisable(disabled);
         positionAsset.setDisable(disabled);
         positionQuantity.setDisable(disabled);
         createPosition.setDisable(disabled);
         updatePosition.setDisable(disabled || selectedPosition == null);
-        deactivatePosition.setDisable(disabled || selectedPosition == null);
+        deactivatePosition.setDisable(disabled || selectedPosition == null || !selectedPosition.active());
         clearPositionSelection.setDisable(disabled);
         snapshotPosition.setDisable(disabled);
         snapshotDate.setDisable(disabled);
@@ -700,6 +828,7 @@ public final class AssetsPositionsView extends VBox {
 
     private void clearData() {
         currentData = WorkspaceData.empty();
+        currentSnapshots = List.of();
         selectedAsset = null;
         selectedPosition = null;
         assetTable.getItems().clear();
@@ -712,6 +841,10 @@ public final class AssetsPositionsView extends VBox {
 
     private String nullIfBlank(String value) {
         return value == null || value.isBlank() ? null : value.strip();
+    }
+
+    private String normalized(String value) {
+        return value == null ? "" : value.strip().toLowerCase(Locale.ROOT);
     }
 
     private String status(boolean active) {
@@ -803,14 +936,12 @@ public final class AssetsPositionsView extends VBox {
         static PositionRow from(PositionDto position, Map<UUID, AccountDto> accounts, Map<UUID, AssetDto> assets) {
             AccountDto account = accounts.get(position.accountId());
             AssetDto asset = assets.get(position.assetId());
-            return new PositionRow(
-                    position,
+            return new PositionRow(position,
                     account == null ? position.accountId().toString() : account.name(),
                     asset == null ? position.assetId().toString() : asset.name(),
                     asset == null ? "—" : DesktopFormatters.assetType(asset.type()),
                     DesktopFormatters.decimal(position.quantity()),
-                    position.active() ? "Actif" : "Inactif"
-            );
+                    position.active() ? "Actif" : "Inactif");
         }
 
         PositionDto position() {
@@ -839,12 +970,14 @@ public final class AssetsPositionsView extends VBox {
     }
 
     public static final class SnapshotRow {
+        private final PositionSnapshotDto snapshot;
         private final String date;
         private final String quantity;
         private final String marketValue;
         private final String confidence;
 
-        private SnapshotRow(String date, String quantity, String marketValue, String confidence) {
+        private SnapshotRow(PositionSnapshotDto snapshot, String date, String quantity, String marketValue, String confidence) {
+            this.snapshot = snapshot;
             this.date = date;
             this.quantity = quantity;
             this.marketValue = marketValue;
@@ -852,12 +985,15 @@ public final class AssetsPositionsView extends VBox {
         }
 
         static SnapshotRow from(PositionSnapshotDto snapshot) {
-            return new SnapshotRow(
+            return new SnapshotRow(snapshot,
                     DesktopFormatters.date(snapshot.valueDate()),
                     DesktopFormatters.decimal(snapshot.quantity()),
                     DesktopFormatters.money(snapshot.marketValue()),
-                    snapshot.confidence()
-            );
+                    snapshot.confidence());
+        }
+
+        PositionSnapshotDto snapshot() {
+            return snapshot;
         }
 
         public String getDate() {
