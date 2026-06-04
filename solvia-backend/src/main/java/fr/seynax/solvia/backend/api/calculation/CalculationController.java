@@ -26,7 +26,7 @@ import fr.seynax.solvia.domain.money.CurrencyCode;
 @RequestMapping("/api")
 public class CalculationController {
 
-    private static final int DEFAULT_MAX_SERIES_POINTS = 5_000;
+    private static final int DEFAULT_MAX_SERIES_POINTS = 100_000;
 
     private final CalculationDataLoader dataLoader;
     private final NetWorthCalculator calculator = new NetWorthCalculator();
@@ -51,7 +51,7 @@ public class CalculationController {
             @RequestParam(defaultValue = "1d") String bucket,
             @RequestParam(defaultValue = "last") String aggregation,
             @RequestParam(defaultValue = "EUR") String currency,
-            @RequestParam(defaultValue = "5000") int maxPoints
+            @RequestParam(defaultValue = "100000") int maxPoints
     ) {
         int cappedMaxPoints = Math.min(Math.max(1, maxPoints), DEFAULT_MAX_SERIES_POINTS);
         return calculator.temporalSeries(
