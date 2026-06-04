@@ -11,6 +11,7 @@ import fr.seynax.solvia.desktop.api.ApiDtos.AssetTypeValueDto;
 public final class DashboardAllocationCard extends SectionCard {
 
     private final TableView<AllocationRow> table = new TableView<>();
+    private final EmptyState empty = new EmptyState();
 
     public DashboardAllocationCard() {
         super("Allocation", "Repartition par classe d'actifs.");
@@ -24,15 +25,22 @@ public final class DashboardAllocationCard extends SectionCard {
         table.getColumns().setAll(type, value, share);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         table.setPrefHeight(180);
-        getChildren().add(table);
+        getChildren().addAll(empty, table);
+        empty.show("Aucune allocation", "L'allocation apparaitra apres la saisie de valeurs.");
     }
 
     public void update(List<AssetTypeValueDto> allocation) {
         table.getItems().setAll(allocation.stream().map(AllocationRow::from).toList());
+        if (allocation.isEmpty()) {
+            empty.show("Aucune allocation", "Aucune repartition n'est disponible sur cette periode.");
+        } else {
+            empty.hide();
+        }
     }
 
     public void clear() {
         table.getItems().clear();
+        empty.show("Aucune allocation", "L'allocation apparaitra apres la saisie de valeurs.");
     }
 
     public static final class AllocationRow {
