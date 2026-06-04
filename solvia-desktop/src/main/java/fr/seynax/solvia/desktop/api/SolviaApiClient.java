@@ -23,10 +23,13 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountSnapshotCreateDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.AccountSnapshotDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.AccountUpdateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AssetCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AssetDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AssetUpdateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.CashFlowCreateDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.CashFlowDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.NetWorthDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.PerformanceDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.PositionCreateDto;
@@ -77,6 +80,24 @@ public final class SolviaApiClient {
 
     public CompletableFuture<AccountDto> createAccount(AccountCreateDto request) {
         return post("/api/accounts", request, AccountDto.class);
+    }
+
+    public CompletableFuture<AccountDto> updateAccount(UUID accountId, AccountUpdateDto request) {
+        return put("/api/accounts/" + accountId, request, AccountDto.class);
+    }
+
+    public CompletableFuture<Void> deactivateAccount(UUID accountId) {
+        return delete("/api/accounts/" + accountId);
+    }
+
+    public CompletableFuture<List<AccountSnapshotDto>> accountSnapshots(UUID accountId) {
+        return get("/api/accounts/" + accountId + "/snapshots", new TypeReference<List<AccountSnapshotDto>>() {
+        });
+    }
+
+    public CompletableFuture<List<CashFlowDto>> cashFlows(UUID accountId) {
+        return get("/api/accounts/" + accountId + "/cash-flows", new TypeReference<List<CashFlowDto>>() {
+        });
     }
 
     public CompletableFuture<List<AssetDto>> assets() {
