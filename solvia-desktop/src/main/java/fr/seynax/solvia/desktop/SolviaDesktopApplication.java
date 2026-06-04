@@ -25,7 +25,11 @@ public class SolviaDesktopApplication extends Application {
 
         AccountsView accountsView = new AccountsView(apiClient);
         EntriesView entriesView = new EntriesView(apiClient);
-        DashboardView dashboardView = new DashboardView(apiClient);
+        DashboardView dashboardView = new DashboardView(
+                apiClient,
+                () -> shell.showPage("Saisie"),
+                () -> shell.showPage("Comptes")
+        );
 
         backendStatusBanner = new BackendStatusBanner(apiClient, preferences, status -> {
             propagateStatus(status, dashboardView, accountsView, entriesView);
@@ -34,8 +38,8 @@ public class SolviaDesktopApplication extends Application {
         shell.setBackendStatusBanner(backendStatusBanner);
 
         shell.addPage("Dashboard", dashboardView);
-        shell.addPage("Accounts", accountsView);
-        shell.addPage("Data entry", entriesView);
+        shell.addPage("Comptes", accountsView);
+        shell.addPage("Saisie", entriesView);
         shell.setStatus("Start the backend with: mvn -pl solvia-backend -am spring-boot:run");
 
         Scene scene = new Scene(shell, 1220, 800);
