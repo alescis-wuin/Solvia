@@ -4,7 +4,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
-public final class SectionCard extends VBox {
+public class SectionCard extends VBox {
 
     public SectionCard(String title, Node... content) {
         this(title, null, content);
