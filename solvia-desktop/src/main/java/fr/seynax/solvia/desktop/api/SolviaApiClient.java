@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -22,9 +23,14 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountSnapshotCreateDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.AssetCreateDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.AssetDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.CashFlowCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.NetWorthDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.PerformanceDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.PositionCreateDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.PositionDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.PositionSnapshotCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.ReadinessDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.SeriesPointDto;
 
@@ -70,8 +76,30 @@ public final class SolviaApiClient {
         return post("/api/accounts", request, AccountDto.class);
     }
 
+    public CompletableFuture<List<AssetDto>> assets() {
+        return get("/api/assets", new TypeReference<List<AssetDto>>() {
+        });
+    }
+
+    public CompletableFuture<AssetDto> createAsset(AssetCreateDto request) {
+        return post("/api/assets", request, AssetDto.class);
+    }
+
+    public CompletableFuture<List<PositionDto>> positions(UUID accountId) {
+        return get("/api/accounts/" + accountId + "/positions", new TypeReference<List<PositionDto>>() {
+        });
+    }
+
+    public CompletableFuture<PositionDto> createPosition(PositionCreateDto request) {
+        return post("/api/positions", request, PositionDto.class);
+    }
+
     public CompletableFuture<Void> createAccountSnapshot(AccountSnapshotCreateDto request) {
         return post("/api/account-snapshots", request, Object.class).thenApply(ignored -> null);
+    }
+
+    public CompletableFuture<Void> createPositionSnapshot(PositionSnapshotCreateDto request) {
+        return post("/api/position-snapshots", request, Object.class).thenApply(ignored -> null);
     }
 
     public CompletableFuture<Void> createCashFlow(CashFlowCreateDto request) {
