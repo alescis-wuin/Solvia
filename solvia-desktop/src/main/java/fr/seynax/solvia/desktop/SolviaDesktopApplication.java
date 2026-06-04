@@ -33,6 +33,12 @@ public class SolviaDesktopApplication extends Application {
                 () -> shell.showPage("Comptes"),
                 () -> shell.showPage("Actifs & positions")
         );
+        accountsView.setOnAccountsChanged(() -> {
+            entriesView.refreshAccounts();
+            assetsPositionsView.refresh();
+            dashboardView.refresh();
+        });
+        entriesView.setOnPortfolioDataChanged(dashboardView::refresh);
         assetsPositionsView.setOnPortfolioDataChanged(dashboardView::refresh);
 
         backendStatusBanner = new BackendStatusBanner(apiClient, preferences, status -> {
