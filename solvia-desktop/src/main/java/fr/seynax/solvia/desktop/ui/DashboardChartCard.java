@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-import javafx.scene.AccessibleRole;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
@@ -51,7 +50,6 @@ public final class DashboardChartCard extends SectionCard {
         lineChart.setTitle("Historique du patrimoine");
         lineChart.setLegendVisible(false);
         lineChart.setAnimated(false);
-        lineChart.setAccessibleRole(AccessibleRole.CHART);
         lineChart.setAccessibleText("Graphique de l'historique du patrimoine.");
         return lineChart;
     }
