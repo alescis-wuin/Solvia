@@ -1,13 +1,13 @@
 package fr.seynax.solvia.desktop;
 
-import java.net.URI;
-
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import fr.seynax.solvia.desktop.api.BackendStatusSnapshot;
 import fr.seynax.solvia.desktop.api.SolviaApiClient;
 import fr.seynax.solvia.desktop.ui.AccountsView;
+import fr.seynax.solvia.desktop.ui.BackendStatusBanner;
 import fr.seynax.solvia.desktop.ui.DashboardView;
 import fr.seynax.solvia.desktop.ui.EntriesView;
 import fr.seynax.solvia.desktop.ui.SolviaShell;
@@ -15,14 +15,23 @@ import fr.seynax.solvia.desktop.ui.ThemeSupport;
 
 public class SolviaDesktopApplication extends Application {
 
+    private BackendStatusBanner backendStatusBanner;
+
     @Override
     public void start(Stage stage) {
-        SolviaApiClient apiClient = new SolviaApiClient(URI.create("http://127.0.0.1:8080"));
+        SolviaDesktopPreferences preferences = new SolviaDesktopPreferences();
+        SolviaApiClient apiClient = new SolviaApiClient(preferences.backendUri());
         SolviaShell shell = new SolviaShell();
 
         AccountsView accountsView = new AccountsView(apiClient);
         EntriesView entriesView = new EntriesView(apiClient);
         DashboardView dashboardView = new DashboardView(apiClient);
+
+        backendStatusBanner = new BackendStatusBanner(apiClient, preferences, status -> {
+            propagateStatus(status, dashboardView, accountsView, entriesView);
+            shell.setStatus(status.message());
+        });
+        shell.setBackendStatusBanner(backendStatusBanner);
 
         shell.addPage("Dashboard", dashboardView);
         shell.addPage("Accounts", accountsView);
@@ -36,7 +45,20 @@ public class SolviaDesktopApplication extends Application {
         stage.setMinWidth(1100);
         stage.setMinHeight(720);
         stage.setScene(scene);
+        stage.setOnShown(event -> backendStatusBanner.start());
+        stage.setOnCloseRequest(event -> backendStatusBanner.stop());
         stage.show();
+    }
+
+    private void propagateStatus(
+            BackendStatusSnapshot status,
+            DashboardView dashboardView,
+            AccountsView accountsView,
+            EntriesView entriesView
+    ) {
+        dashboardView.backendStatusChanged(status);
+        accountsView.backendStatusChanged(status);
+        entriesView.backendStatusChanged(status);
     }
 
     public static void main(String[] args) {
