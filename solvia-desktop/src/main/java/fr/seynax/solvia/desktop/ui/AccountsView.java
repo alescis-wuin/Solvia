@@ -16,70 +16,98 @@ import javafx.scene.layout.VBox;
 
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountDto;
+import fr.seynax.solvia.desktop.api.BackendConnectionState;
+import fr.seynax.solvia.desktop.api.BackendStatusSnapshot;
 import fr.seynax.solvia.desktop.api.SolviaApiClient;
 
 public final class AccountsView extends VBox {
 
     private final SolviaApiClient apiClient;
-    private final Label status = new Label("Ready");
+    private final Label status = new Label("Vérification du backend local...");
     private final TableView<AccountRow> table = new TableView<>();
     private final TextField name = new TextField();
     private final ComboBox<String> type = new ComboBox<>();
     private final ComboBox<String> envelopeType = new ComboBox<>();
     private final TextField currency = new TextField("EUR");
+    private final Button create = new Button("Créer le compte");
+    private volatile boolean backendReady;
 
     public AccountsView(SolviaApiClient apiClient) {
         this.apiClient = apiClient;
+        getStyleClass().add("content-view");
         setSpacing(16);
         setPadding(new Insets(20));
         type.getItems().setAll("CHECKING", "SAVINGS", "INVESTMENT", "PEA", "CTO", "CRYPTO_EXCHANGE", "CRYPTO_WALLET", "CASHBACK", "OTHER");
         type.setValue("CHECKING");
         envelopeType.getItems().setAll("CURRENT_ACCOUNT", "REGULATED_SAVINGS", "PEA", "CTO", "CRYPTO", "PRIVATE_ASSET", "CASHBACK", "OTHER");
         envelopeType.setValue("CURRENT_ACCOUNT");
+        status.getStyleClass().add("help-text");
         getChildren().addAll(form(), table(), status);
         VBox.setVgrow(table, Priority.ALWAYS);
+        setInputsDisabled(true);
+    }
+
+    public void backendStatusChanged(BackendStatusSnapshot snapshot) {
+        backendReady = snapshot.canLoadData();
+        if (snapshot.state() == BackendConnectionState.CHECKING) {
+            setInputsDisabled(true);
+            status.setText("Vérification du backend local...");
+            return;
+        }
+        if (!backendReady) {
+            setInputsDisabled(true);
+            table.getItems().clear();
+            status.setText(snapshot.message());
+            return;
+        }
+        setInputsDisabled(false);
         refresh();
     }
 
     public void refresh() {
+        if (!backendReady) {
+            status.setText("Backend local non prêt.");
+            return;
+        }
+        status.setText("Chargement des comptes...");
         apiClient.accounts().whenComplete((accounts, error) -> Platform.runLater(() -> {
             if (error != null) {
                 status.setText(DesktopFormatters.errorMessage(error));
                 return;
             }
             table.getItems().setAll(accounts.stream().map(AccountRow::from).toList());
-            status.setText(accounts.size() + " account(s)");
+            status.setText(accounts.isEmpty() ? "Aucun compte enregistré." : accounts.size() + " compte(s)");
         }));
     }
 
     private GridPane form() {
-        Button create = new Button("Create account");
         create.setOnAction(event -> createAccount());
         GridPane grid = new GridPane();
+        grid.getStyleClass().add("form-card");
         grid.setHgap(12);
         grid.setVgap(8);
-        grid.add(new Label("Name"), 0, 0);
+        grid.add(new Label("Nom"), 0, 0);
         grid.add(name, 1, 0);
         grid.add(new Label("Type"), 0, 1);
         grid.add(type, 1, 1);
-        grid.add(new Label("Envelope"), 2, 1);
+        grid.add(new Label("Enveloppe"), 2, 1);
         grid.add(envelopeType, 3, 1);
-        grid.add(new Label("Currency"), 2, 0);
+        grid.add(new Label("Devise"), 2, 0);
         grid.add(currency, 3, 0);
         grid.add(new HBox(8, create), 1, 2, 3, 1);
         return grid;
     }
 
     private TableView<AccountRow> table() {
-        TableColumn<AccountRow, String> nameColumn = new TableColumn<>("Name");
+        TableColumn<AccountRow, String> nameColumn = new TableColumn<>("Nom");
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         TableColumn<AccountRow, String> typeColumn = new TableColumn<>("Type");
         typeColumn.setCellValueFactory(new PropertyValueFactory<>("type"));
-        TableColumn<AccountRow, String> envelopeColumn = new TableColumn<>("Envelope");
+        TableColumn<AccountRow, String> envelopeColumn = new TableColumn<>("Enveloppe");
         envelopeColumn.setCellValueFactory(new PropertyValueFactory<>("envelopeType"));
-        TableColumn<AccountRow, String> currencyColumn = new TableColumn<>("Currency");
+        TableColumn<AccountRow, String> currencyColumn = new TableColumn<>("Devise");
         currencyColumn.setCellValueFactory(new PropertyValueFactory<>("currencyCode"));
-        TableColumn<AccountRow, String> activeColumn = new TableColumn<>("Active");
+        TableColumn<AccountRow, String> activeColumn = new TableColumn<>("Actif");
         activeColumn.setCellValueFactory(new PropertyValueFactory<>("active"));
         table.getColumns().setAll(nameColumn, typeColumn, envelopeColumn, currencyColumn, activeColumn);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
@@ -87,16 +115,31 @@ public final class AccountsView extends VBox {
     }
 
     private void createAccount() {
+        if (!backendReady) {
+            status.setText("Backend local non prêt.");
+            return;
+        }
         AccountCreateDto request = new AccountCreateDto(name.getText(), type.getValue(), envelopeType.getValue(), currency.getText());
+        create.setDisable(true);
+        status.setText("Création du compte...");
         apiClient.createAccount(request).whenComplete((account, error) -> Platform.runLater(() -> {
+            create.setDisable(false);
             if (error != null) {
                 status.setText(DesktopFormatters.errorMessage(error));
                 return;
             }
             name.clear();
-            status.setText("Created account: " + account.name());
+            status.setText("Compte créé: " + account.name());
             refresh();
         }));
+    }
+
+    private void setInputsDisabled(boolean disabled) {
+        name.setDisable(disabled);
+        type.setDisable(disabled);
+        envelopeType.setDisable(disabled);
+        currency.setDisable(disabled);
+        create.setDisable(disabled);
     }
 
     public static final class AccountRow {
@@ -115,7 +158,7 @@ public final class AccountsView extends VBox {
         }
 
         static AccountRow from(AccountDto account) {
-            return new AccountRow(account.name(), account.type(), account.envelopeType(), account.currencyCode(), String.valueOf(account.active()));
+            return new AccountRow(account.name(), account.type(), account.envelopeType(), account.currencyCode(), account.active() ? "Oui" : "Non");
         }
 
         public String getName() {
