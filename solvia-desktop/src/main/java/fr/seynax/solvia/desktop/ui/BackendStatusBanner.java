@@ -21,6 +21,7 @@ import fr.seynax.solvia.desktop.SolviaDesktopPreferences;
 import fr.seynax.solvia.desktop.api.BackendConnectionState;
 import fr.seynax.solvia.desktop.api.BackendStatusSnapshot;
 import fr.seynax.solvia.desktop.api.SolviaApiClient;
+import fr.seynax.solvia.desktop.backend.BackendLauncher;
 
 public final class BackendStatusBanner extends VBox {
 
@@ -28,6 +29,7 @@ public final class BackendStatusBanner extends VBox {
 
     private final SolviaApiClient apiClient;
     private final SolviaDesktopPreferences preferences;
+    private final BackendLauncher backendLauncher;
     private final Consumer<BackendStatusSnapshot> statusListener;
     private final Label state = new Label("Vérification...");
     private final Label message = new Label("Vérification du backend local...");
@@ -35,6 +37,7 @@ public final class BackendStatusBanner extends VBox {
     private final TextField backendUrl = new TextField();
     private final Button apply = new Button("Appliquer");
     private final Button retry = new Button("Réessayer");
+    private final Button startBackend = new Button("Démarrer backend");
     private final Timeline timeline;
     private volatile boolean checking;
 
@@ -46,6 +49,7 @@ public final class BackendStatusBanner extends VBox {
         this.apiClient = Objects.requireNonNull(apiClient, "api client is required");
         this.preferences = Objects.requireNonNull(preferences, "desktop preferences are required");
         this.statusListener = Objects.requireNonNull(statusListener, "status listener is required");
+        this.backendLauncher = new BackendLauncher();
         this.backendUrl.setText(apiClient.baseUri().toString());
         this.timeline = new Timeline(new KeyFrame(CHECK_INTERVAL, event -> checkNow()));
         this.timeline.setCycleCount(Timeline.INDEFINITE);
@@ -59,6 +63,7 @@ public final class BackendStatusBanner extends VBox {
 
     public void stop() {
         timeline.stop();
+        backendLauncher.stop();
     }
 
     public void checkNow() {
@@ -89,12 +94,14 @@ public final class BackendStatusBanner extends VBox {
 
         apply.setTooltip(new Tooltip("Enregistrer l’URL et relancer la vérification."));
         retry.setTooltip(new Tooltip("Relancer immédiatement la vérification du backend."));
+        startBackend.setTooltip(new Tooltip("Tente de lancer le backend avec Maven depuis la racine du projet. Action explicite uniquement."));
         apply.setOnAction(event -> applyBackendUrl());
         retry.setOnAction(event -> checkNow());
+        startBackend.setOnAction(event -> startBackend());
 
         HBox top = new HBox(12, state, message);
         top.setAlignment(Pos.CENTER_LEFT);
-        HBox controls = new HBox(10, new Label("Backend"), backendUrl, apply, retry);
+        HBox controls = new HBox(10, new Label("Backend"), backendUrl, apply, retry, startBackend);
         controls.setAlignment(Pos.CENTER_LEFT);
         getChildren().addAll(top, details, controls);
     }
@@ -114,6 +121,25 @@ public final class BackendStatusBanner extends VBox {
         }
     }
 
+    private void startBackend() {
+        startBackend.setDisable(true);
+        message.setText("Démarrage du backend local...");
+        details.setText("Commande: mvn -pl solvia-backend -am spring-boot:run");
+        backendLauncher.start().whenComplete((result, error) -> Platform.runLater(() -> {
+            startBackend.setDisable(false);
+            if (error != null) {
+                update(BackendStatusSnapshot.error(apiClient.baseUri().toString(), "Démarrage backend impossible.", DesktopFormatters.errorMessage(error)));
+                return;
+            }
+            if (!result.success()) {
+                update(BackendStatusSnapshot.error(apiClient.baseUri().toString(), result.message(), result.message()));
+                return;
+            }
+            message.setText(result.message());
+            checkNow();
+        }));
+    }
+
     private void update(BackendStatusSnapshot snapshot) {
         getStyleClass().removeAll(
                 "status-checking",
@@ -127,6 +153,7 @@ public final class BackendStatusBanner extends VBox {
         message.setText(snapshot.message());
         details.setText(details(snapshot));
         retry.setDisable(snapshot.state() == BackendConnectionState.CHECKING);
+        startBackend.setDisable(snapshot.state() == BackendConnectionState.CHECKING || backendLauncher.running());
         statusListener.accept(snapshot);
     }
 
