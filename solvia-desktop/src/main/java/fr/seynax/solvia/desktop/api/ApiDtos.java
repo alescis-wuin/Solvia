@@ -42,12 +42,64 @@ public final class ApiDtos {
     public record AccountCreateDto(String name, String type, String envelopeType, String currencyCode) {
     }
 
+    public record AssetDto(
+            UUID id,
+            String name,
+            String type,
+            String currencyCode,
+            String symbol,
+            boolean active,
+            Instant createdAt
+    ) {
+        @Override
+        public String toString() {
+            String suffix = symbol == null || symbol.isBlank() ? currencyCode : symbol + " / " + currencyCode;
+            return name + " (" + suffix + ")";
+        }
+    }
+
+    public record AssetCreateDto(String name, String type, String currencyCode, String symbol) {
+    }
+
+    public record PositionDto(
+            UUID id,
+            UUID accountId,
+            UUID assetId,
+            BigDecimal quantity,
+            boolean active,
+            Instant createdAt
+    ) {
+    }
+
+    public record PositionCreateDto(UUID accountId, UUID assetId, BigDecimal quantity) {
+    }
+
     public record AccountSnapshotCreateDto(
             UUID accountId,
             LocalDate valueDate,
             MoneyDto balance,
             String confidence,
             String note
+    ) {
+    }
+
+    public record PositionSnapshotCreateDto(
+            UUID positionId,
+            LocalDate valueDate,
+            BigDecimal quantity,
+            MoneyDto marketValue,
+            String confidence
+    ) {
+    }
+
+    public record PositionSnapshotDto(
+            UUID id,
+            UUID positionId,
+            LocalDate valueDate,
+            BigDecimal quantity,
+            MoneyDto marketValue,
+            String confidence,
+            Instant recordedAt
     ) {
     }
 
