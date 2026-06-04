@@ -21,6 +21,7 @@ public final class SolviaShell extends BorderPane {
     private final VBox top = new VBox(10);
     private final VBox navigation = new VBox(8);
     private final Map<String, Button> buttons = new LinkedHashMap<>();
+    private final Map<String, Node> pages = new LinkedHashMap<>();
 
     public SolviaShell() {
         top.getChildren().add(header());
@@ -34,12 +35,23 @@ public final class SolviaShell extends BorderPane {
         Button button = new Button(label);
         button.setMaxWidth(Double.MAX_VALUE);
         button.setAlignment(Pos.CENTER_LEFT);
-        button.setOnAction(event -> show(label, page));
+        button.setOnAction(event -> showPage(label));
         buttons.put(label, button);
+        pages.put(label, page);
         navigation.getChildren().add(button);
         if (getCenter() == null) {
-            show(label, page);
+            showPage(label);
         }
+    }
+
+    public void showPage(String label) {
+        Node page = pages.get(label);
+        if (page == null) {
+            return;
+        }
+        title.setText(label);
+        setCenter(page);
+        buttons.forEach((buttonLabel, button) -> button.setDisable(buttonLabel.equals(label)));
     }
 
     public void setStatus(String text) {
@@ -53,11 +65,6 @@ public final class SolviaShell extends BorderPane {
         if (banner != null) {
             top.getChildren().add(banner);
         }
-    }
-
-    private void show(String label, Node page) {
-        title.setText(label);
-        setCenter(page);
     }
 
     private Node header() {
