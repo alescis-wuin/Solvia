@@ -61,6 +61,9 @@ public final class ApiDtos {
     public record AssetCreateDto(String name, String type, String currencyCode, String symbol) {
     }
 
+    public record AssetUpdateDto(String name, String type, String currencyCode, String symbol, boolean active) {
+    }
+
     public record PositionDto(
             UUID id,
             UUID accountId,
@@ -72,6 +75,9 @@ public final class ApiDtos {
     }
 
     public record PositionCreateDto(UUID accountId, UUID assetId, BigDecimal quantity) {
+    }
+
+    public record PositionUpdateDto(BigDecimal quantity, boolean active) {
     }
 
     public record AccountSnapshotCreateDto(
