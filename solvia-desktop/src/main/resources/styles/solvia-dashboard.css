@@ -1,0 +1,43 @@
+.dashboard-body {
+    -fx-alignment: top-left;
+}
+
+.dashboard-side {
+    -fx-pref-width: 420px;
+    -fx-min-width: 360px;
+    -fx-max-width: 460px;
+}
+
+.dashboard-action-row {
+    -fx-alignment: center-left;
+}
+
+.dashboard-action-row .button {
+    -fx-min-width: 145px;
+}
+
+.primary-action {
+    -fx-border-color: -solvia-accent;
+    -fx-border-width: 2px;
+}
+
+.dashboard-quality-grid .label {
+    -fx-padding: 2px 0;
+}
+
+.metric-grid {
+    -fx-fill-height: true;
+}
+
+.metric-card {
+    -fx-min-width: 180px;
+    -fx-pref-width: 260px;
+}
+
+.metric-value {
+    -fx-font-size: 22px;
+}
+
+.chart {
+    -fx-min-height: 420px;
+}
