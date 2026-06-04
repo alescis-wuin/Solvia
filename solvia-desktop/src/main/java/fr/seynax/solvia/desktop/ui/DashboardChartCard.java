@@ -20,6 +20,7 @@ public final class DashboardChartCard extends SectionCard {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM");
 
     private final LineChart<String, Number> chart;
+    private final EmptyState empty = new EmptyState();
 
     public DashboardChartCard() {
         this(createChart());
@@ -28,7 +29,9 @@ public final class DashboardChartCard extends SectionCard {
     private DashboardChartCard(LineChart<String, Number> chart) {
         super("Historique", "Evolution du patrimoine sur la periode selectionnee.", chart);
         this.chart = chart;
+        getChildren().add(empty);
         VBox.setVgrow(chart, Priority.ALWAYS);
+        empty.show("Aucune serie", "Les points apparaitront apres la saisie de valeurs.");
     }
 
     public void update(List<SeriesPointDto> points) {
@@ -40,11 +43,19 @@ public final class DashboardChartCard extends SectionCard {
             series.getData().add(data);
         }
         chart.getData().setAll(series);
-        series.getData().forEach(data -> installTooltip(data.getNode(), points.get(series.getData().indexOf(data))));
+        for (int index = 0; index < series.getData().size(); index++) {
+            installTooltip(series.getData().get(index).getNode(), points.get(index));
+        }
+        if (points.isEmpty()) {
+            empty.show("Aucune serie", "Aucune valeur n'est disponible sur cette periode.");
+        } else {
+            empty.hide();
+        }
     }
 
     public void clear() {
         chart.getData().clear();
+        empty.show("Aucune serie", "Les points apparaitront apres la saisie de valeurs.");
     }
 
     private void installTooltip(Node node, SeriesPointDto point) {
