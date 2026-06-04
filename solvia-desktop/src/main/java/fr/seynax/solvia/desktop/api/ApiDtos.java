@@ -3,6 +3,7 @@ package fr.seynax.solvia.desktop.api;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -160,7 +161,7 @@ public final class ApiDtos {
     ) {
     }
 
-    public record SeriesPointDto(LocalDate valueDate, MoneyDto value) {
+    public record SeriesPointDto(LocalDateTime valueDate, MoneyDto value) {
     }
 
     public record PerformanceDto(
