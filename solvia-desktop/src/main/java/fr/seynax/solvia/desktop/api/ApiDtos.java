@@ -14,6 +14,16 @@ public final class ApiDtos {
     public record MoneyDto(BigDecimal amount, String currencyCode) {
     }
 
+    public record ReadinessDto(
+            String status,
+            String service,
+            Instant checkedAt,
+            String backendStatus,
+            String databaseStatus,
+            String message
+    ) {
+    }
+
     public record AccountDto(
             UUID id,
             String name,
