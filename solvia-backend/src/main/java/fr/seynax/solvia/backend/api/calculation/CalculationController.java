@@ -1,6 +1,7 @@
 package fr.seynax.solvia.backend.api.calculation;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -13,7 +14,7 @@ import fr.seynax.solvia.backend.api.money.MoneyResponse;
 import fr.seynax.solvia.domain.calculation.NetWorthCalculator;
 import fr.seynax.solvia.domain.calculation.NetWorthCalculator.AggregationMode;
 import fr.seynax.solvia.domain.calculation.NetWorthCalculator.AssetTypeValuation;
-import fr.seynax.solvia.domain.calculation.NetWorthCalculator.NetWorthSeriesPoint;
+import fr.seynax.solvia.domain.calculation.NetWorthCalculator.NetWorthTemporalSeriesPoint;
 import fr.seynax.solvia.domain.calculation.NetWorthCalculator.NetWorthValuation;
 import fr.seynax.solvia.domain.calculation.NetWorthCalculator.PerformanceSummary;
 import fr.seynax.solvia.domain.calculation.NetWorthCalculator.TimeBucket;
@@ -24,6 +25,8 @@ import fr.seynax.solvia.domain.money.CurrencyCode;
 @RestController
 @RequestMapping("/api")
 public class CalculationController {
+
+    private static final int DEFAULT_MAX_SERIES_POINTS = 5_000;
 
     private final CalculationDataLoader dataLoader;
     private final NetWorthCalculator calculator = new NetWorthCalculator();
@@ -47,15 +50,18 @@ public class CalculationController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "1d") String bucket,
             @RequestParam(defaultValue = "last") String aggregation,
-            @RequestParam(defaultValue = "EUR") String currency
+            @RequestParam(defaultValue = "EUR") String currency,
+            @RequestParam(defaultValue = "5000") int maxPoints
     ) {
-        return calculator.series(
+        int cappedMaxPoints = Math.min(Math.max(1, maxPoints), DEFAULT_MAX_SERIES_POINTS);
+        return calculator.temporalSeries(
                         dataLoader.load(),
-                        from,
-                        to,
+                        from.atStartOfDay(),
+                        to.atTime(23, 59, 59),
                         parseBucket(bucket),
                         parseAggregation(aggregation),
-                        CurrencyCode.of(currency)
+                        CurrencyCode.of(currency),
+                        cappedMaxPoints
                 ).stream()
                 .map(SeriesPointResponse::from)
                 .toList();
@@ -94,18 +100,29 @@ public class CalculationController {
     private TimeBucket parseBucket(String bucket) {
         String normalized = bucket.strip().toLowerCase();
         if (normalized.length() < 2) {
-            throw new IllegalArgumentException("Bucket must use a positive amount and unit, for example 2d");
+            throw new IllegalArgumentException("Bucket must use a positive amount and unit, for example 2d, 15min or 1h");
         }
-        String amountPart = normalized.substring(0, normalized.length() - 1);
-        char unitPart = normalized.charAt(normalized.length() - 1);
-        int amount = Integer.parseInt(amountPart);
+        int split = 0;
+        while (split < normalized.length() && Character.isDigit(normalized.charAt(split))) {
+            split++;
+        }
+        if (split == 0 || split == normalized.length()) {
+            throw new IllegalArgumentException("Bucket must use a positive amount and unit, for example 2d, 15min or 1h");
+        }
+        int amount = Integer.parseInt(normalized.substring(0, split));
+        String unitPart = normalized.substring(split);
         TimeBucketUnit unit = switch (unitPart) {
-            case 'd' -> TimeBucketUnit.DAYS;
-            case 'w' -> TimeBucketUnit.WEEKS;
-            case 'm' -> TimeBucketUnit.MONTHS;
+            case "s", "sec", "secs", "second", "seconds" -> TimeBucketUnit.SECONDS;
+            case "min", "mins", "minute", "minutes" -> TimeBucketUnit.MINUTES;
+            case "h", "hour", "hours" -> TimeBucketUnit.HOURS;
+            case "d", "day", "days" -> TimeBucketUnit.DAYS;
+            case "w", "week", "weeks" -> TimeBucketUnit.WEEKS;
+            case "m", "mo", "month", "months" -> TimeBucketUnit.MONTHS;
+            case "y", "year", "years" -> TimeBucketUnit.MONTHS;
             default -> throw new IllegalArgumentException("Unsupported bucket unit: " + unitPart);
         };
-        return new TimeBucket(amount, unit);
+        int normalizedAmount = unitPart.equals("y") || unitPart.equals("year") || unitPart.equals("years") ? amount * 12 : amount;
+        return new TimeBucket(normalizedAmount, unit);
     }
 
     public record NetWorthResponse(
@@ -136,8 +153,8 @@ public class CalculationController {
         }
     }
 
-    public record SeriesPointResponse(LocalDate valueDate, MoneyResponse value) {
-        static SeriesPointResponse from(NetWorthSeriesPoint point) {
+    public record SeriesPointResponse(LocalDateTime valueDate, MoneyResponse value) {
+        static SeriesPointResponse from(NetWorthTemporalSeriesPoint point) {
             return new SeriesPointResponse(point.valueDate(), MoneyResponse.from(point.value()));
         }
     }
