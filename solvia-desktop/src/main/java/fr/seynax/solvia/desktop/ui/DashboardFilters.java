@@ -63,7 +63,7 @@ public final class DashboardFilters extends VBox {
 
     public void setRefreshDisabled(boolean disabled) {
         refresh.setDisable(disabled);
-        stepSelector.setDisabled(disabled);
+        stepSelector.setSelectorDisabled(disabled);
         aggregation.setDisable(disabled);
     }
 }
