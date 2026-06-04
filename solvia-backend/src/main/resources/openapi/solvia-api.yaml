@@ -11,7 +11,11 @@ paths:
       summary: Check backend readiness
       responses:
         '200':
-          description: Backend is ready
+          description: Backend readiness returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
   /api/accounts:
     get:
       summary: List accounts
@@ -262,6 +266,30 @@ paths:
           description: Cash flows returned
         '404':
           description: Account not found
+  /api/net-worth:
+    get:
+      summary: Return net worth at a date
+      responses:
+        '200':
+          description: Net worth returned
+  /api/net-worth/series:
+    get:
+      summary: Return net-worth series
+      responses:
+        '200':
+          description: Net-worth series returned
+  /api/performance:
+    get:
+      summary: Return performance summary
+      responses:
+        '200':
+          description: Performance returned
+  /api/allocation:
+    get:
+      summary: Return allocation by asset type
+      responses:
+        '200':
+          description: Allocation returned
   /api/openapi.yaml:
     get:
       summary: Return this OpenAPI contract
@@ -292,6 +320,27 @@ components:
         type: string
         format: uuid
   schemas:
+    ReadinessResponse:
+      type: object
+      required: [status, service, checkedAt, backendStatus, databaseStatus, message]
+      properties:
+        status:
+          type: string
+          enum: [UP, DEGRADED]
+        service:
+          type: string
+          example: solvia-backend
+        checkedAt:
+          type: string
+          format: date-time
+        backendStatus:
+          type: string
+          enum: [UP]
+        databaseStatus:
+          type: string
+          enum: [UP, DOWN]
+        message:
+          type: string
     MoneyRequest:
       type: object
       required: [amount, currencyCode]
