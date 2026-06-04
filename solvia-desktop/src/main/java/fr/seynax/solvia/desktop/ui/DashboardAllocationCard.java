@@ -14,8 +14,8 @@ public final class DashboardAllocationCard extends SectionCard {
     private final EmptyState empty = new EmptyState();
 
     public DashboardAllocationCard() {
-        super("Allocation", "Repartition par classe d'actifs.");
-        table.setAccessibleText("Tableau de repartition du patrimoine par classe d'actifs.");
+        super("Allocation", "Répartition par classe d'actifs.");
+        table.setAccessibleText("Tableau de répartition du patrimoine par classe d'actifs.");
         TableColumn<AllocationRow, String> type = new TableColumn<>("Classe d'actifs");
         type.setCellValueFactory(new PropertyValueFactory<>("assetType"));
         TableColumn<AllocationRow, String> value = new TableColumn<>("Valeur");
@@ -26,13 +26,14 @@ public final class DashboardAllocationCard extends SectionCard {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         table.setPrefHeight(180);
         getChildren().addAll(empty, table);
-        empty.show("Aucune allocation", "L'allocation apparaitra apres la saisie de valeurs.");
+        empty.show("Aucune allocation", "L'allocation apparaîtra après la saisie de valeurs.");
     }
 
     public void update(List<AssetTypeValueDto> allocation) {
-        table.getItems().setAll(allocation.stream().map(AllocationRow::from).toList());
-        if (allocation.isEmpty()) {
-            empty.show("Aucune allocation", "Aucune repartition n'est disponible sur cette periode.");
+        List<AllocationRow> rows = allocation == null ? List.of() : allocation.stream().map(AllocationRow::from).toList();
+        table.getItems().setAll(rows);
+        if (rows.isEmpty()) {
+            empty.show("Aucune allocation", "Aucune répartition n'est disponible sur cette période.");
         } else {
             empty.hide();
         }
@@ -40,7 +41,7 @@ public final class DashboardAllocationCard extends SectionCard {
 
     public void clear() {
         table.getItems().clear();
-        empty.show("Aucune allocation", "L'allocation apparaitra apres la saisie de valeurs.");
+        empty.show("Aucune allocation", "L'allocation apparaîtra après la saisie de valeurs.");
     }
 
     public static final class AllocationRow {
@@ -55,7 +56,11 @@ public final class DashboardAllocationCard extends SectionCard {
         }
 
         static AllocationRow from(AssetTypeValueDto value) {
-            return new AllocationRow(value.assetType(), DesktopFormatters.money(value.value()), DesktopFormatters.percent(value.allocation()));
+            return new AllocationRow(
+                    DesktopFormatters.assetType(value.assetType()),
+                    DesktopFormatters.money(value.value()),
+                    DesktopFormatters.percent(value.allocation())
+            );
         }
 
         public String getAssetType() {
