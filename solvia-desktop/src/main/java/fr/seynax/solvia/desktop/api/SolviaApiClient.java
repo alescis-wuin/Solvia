@@ -25,12 +25,15 @@ import fr.seynax.solvia.desktop.api.ApiDtos.AccountDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AccountSnapshotCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AssetCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.AssetDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.AssetUpdateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.CashFlowCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.NetWorthDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.PerformanceDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.PositionCreateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.PositionDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.PositionSnapshotCreateDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.PositionSnapshotDto;
+import fr.seynax.solvia.desktop.api.ApiDtos.PositionUpdateDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.ReadinessDto;
 import fr.seynax.solvia.desktop.api.ApiDtos.SeriesPointDto;
 
@@ -85,6 +88,14 @@ public final class SolviaApiClient {
         return post("/api/assets", request, AssetDto.class);
     }
 
+    public CompletableFuture<AssetDto> updateAsset(UUID assetId, AssetUpdateDto request) {
+        return put("/api/assets/" + assetId, request, AssetDto.class);
+    }
+
+    public CompletableFuture<Void> deactivateAsset(UUID assetId) {
+        return delete("/api/assets/" + assetId);
+    }
+
     public CompletableFuture<List<PositionDto>> positions(UUID accountId) {
         return get("/api/accounts/" + accountId + "/positions", new TypeReference<List<PositionDto>>() {
         });
@@ -94,12 +105,25 @@ public final class SolviaApiClient {
         return post("/api/positions", request, PositionDto.class);
     }
 
+    public CompletableFuture<PositionDto> updatePosition(UUID positionId, PositionUpdateDto request) {
+        return put("/api/positions/" + positionId, request, PositionDto.class);
+    }
+
+    public CompletableFuture<Void> deactivatePosition(UUID positionId) {
+        return delete("/api/positions/" + positionId);
+    }
+
     public CompletableFuture<Void> createAccountSnapshot(AccountSnapshotCreateDto request) {
         return post("/api/account-snapshots", request, Object.class).thenApply(ignored -> null);
     }
 
     public CompletableFuture<Void> createPositionSnapshot(PositionSnapshotCreateDto request) {
         return post("/api/position-snapshots", request, Object.class).thenApply(ignored -> null);
+    }
+
+    public CompletableFuture<List<PositionSnapshotDto>> positionSnapshots(UUID positionId) {
+        return get("/api/positions/" + positionId + "/snapshots", new TypeReference<List<PositionSnapshotDto>>() {
+        });
     }
 
     public CompletableFuture<Void> createCashFlow(CashFlowCreateDto request) {
@@ -158,6 +182,19 @@ public final class SolviaApiClient {
                 .header("Content-Type", "application/json")
                 .build();
         return send(request).thenApply(body -> read(body, responseType));
+    }
+
+    private <T> CompletableFuture<T> put(String path, Object payload, Class<T> responseType) {
+        HttpRequest request = request(path)
+                .PUT(HttpRequest.BodyPublishers.ofString(write(payload)))
+                .header("Content-Type", "application/json")
+                .build();
+        return send(request).thenApply(body -> read(body, responseType));
+    }
+
+    private CompletableFuture<Void> delete(String path) {
+        HttpRequest request = request(path).DELETE().build();
+        return send(request).thenApply(ignored -> null);
     }
 
     private HttpRequest.Builder request(String path) {
