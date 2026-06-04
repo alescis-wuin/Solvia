@@ -8,6 +8,8 @@ import javax.sql.DataSource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import fr.seynax.solvia.backend.db.DatabaseMigrationInitializer;
+
 @RestController
 class ReadinessController {
 
@@ -16,9 +18,11 @@ class ReadinessController {
     private static final String STATUS_DOWN = "DOWN";
 
     private final DataSource dataSource;
+    private final DatabaseMigrationInitializer migrationInitializer;
 
-    ReadinessController(DataSource dataSource) {
+    ReadinessController(DataSource dataSource, DatabaseMigrationInitializer migrationInitializer) {
         this.dataSource = dataSource;
+        this.migrationInitializer = migrationInitializer;
     }
 
     @GetMapping("/api/readiness")
@@ -27,7 +31,7 @@ class ReadinessController {
         String status = STATUS_UP.equals(database.status()) ? STATUS_UP : STATUS_DEGRADED;
         String message = STATUS_UP.equals(database.status())
                 ? "Backend and PostgreSQL are reachable."
-                : "Backend is running but PostgreSQL is not reachable: " + database.message();
+                : "Backend is running but PostgreSQL is not ready: " + database.message();
 
         return new ReadinessResponse(
                 status,
@@ -41,10 +45,13 @@ class ReadinessController {
 
     private ComponentState databaseState() {
         try (Connection connection = dataSource.getConnection()) {
-            if (connection.isValid(2)) {
-                return ComponentState.up("PostgreSQL connection validated.");
+            if (!connection.isValid(2)) {
+                return ComponentState.down("JDBC connection validation failed.");
             }
-            return ComponentState.down("JDBC connection validation failed.");
+            if (!migrationInitializer.migrateIfPossible()) {
+                return ComponentState.down("Database migration failed: " + migrationInitializer.lastError());
+            }
+            return ComponentState.up("PostgreSQL connection and schema validated.");
         } catch (Exception exception) {
             return ComponentState.down(safeMessage(exception));
         }
