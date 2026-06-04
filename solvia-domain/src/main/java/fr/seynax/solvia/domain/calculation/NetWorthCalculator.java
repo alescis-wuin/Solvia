@@ -3,6 +3,7 @@ package fr.seynax.solvia.domain.calculation;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -42,8 +43,6 @@ public final class NetWorthCalculator {
                 .collect(Collectors.toMap(Account::id, Function.identity(), (first, second) -> first, LinkedHashMap::new));
         Map<UUID, Asset> assetsById = data.assets().stream()
                 .collect(Collectors.toMap(Asset::id, Function.identity(), (first, second) -> first, LinkedHashMap::new));
-        Map<UUID, Position> positionsById = data.positions().stream()
-                .collect(Collectors.toMap(Position::id, Function.identity(), (first, second) -> first, LinkedHashMap::new));
 
         Map<UUID, MoneyAmount> accountValues = new LinkedHashMap<>();
         accountsById.keySet().forEach(accountId -> accountValues.put(accountId, MoneyAmount.zero(reportingCurrency)));
@@ -138,6 +137,41 @@ public final class NetWorthCalculator {
                 case AVERAGE -> averageDailyValue(data, cursor, bucketEnd, reportingCurrency);
             };
             points.add(new NetWorthSeriesPoint(cursor, value));
+            cursor = next;
+        }
+        return List.copyOf(points);
+    }
+
+    public List<NetWorthTemporalSeriesPoint> temporalSeries(
+            CalculationData data,
+            LocalDateTime from,
+            LocalDateTime to,
+            TimeBucket bucket,
+            AggregationMode aggregationMode,
+            CurrencyCode reportingCurrency,
+            int maxPoints
+    ) {
+        requirePeriod(from, to);
+        Objects.requireNonNull(bucket, "time bucket is required");
+        Objects.requireNonNull(aggregationMode, "aggregation mode is required");
+        Objects.requireNonNull(reportingCurrency, "reporting currency is required");
+        if (maxPoints <= 0) {
+            throw new IllegalArgumentException("maximum point count must be positive");
+        }
+
+        List<NetWorthTemporalSeriesPoint> points = new ArrayList<>();
+        LocalDateTime cursor = from;
+        while (!cursor.isAfter(to)) {
+            if (points.size() >= maxPoints) {
+                throw new IllegalArgumentException("Requested series is too dense. Increase the time step or reduce the period. Maximum points: " + maxPoints);
+            }
+            LocalDateTime next = bucket.next(cursor);
+            LocalDateTime bucketEnd = min(to, next.minusNanos(1));
+            MoneyAmount value = switch (aggregationMode) {
+                case LAST_KNOWN -> valueAt(data, bucketEnd.toLocalDate(), reportingCurrency).total();
+                case AVERAGE -> averageDailyValue(data, cursor.toLocalDate(), bucketEnd.toLocalDate(), reportingCurrency);
+            };
+            points.add(new NetWorthTemporalSeriesPoint(cursor, value));
             cursor = next;
         }
         return List.copyOf(points);
@@ -253,7 +287,19 @@ public final class NetWorthCalculator {
         return first.isBefore(second) ? first : second;
     }
 
+    private LocalDateTime min(LocalDateTime first, LocalDateTime second) {
+        return first.isBefore(second) ? first : second;
+    }
+
     private void requirePeriod(LocalDate from, LocalDate to) {
+        Objects.requireNonNull(from, "period start date is required");
+        Objects.requireNonNull(to, "period end date is required");
+        if (from.isAfter(to)) {
+            throw new IllegalArgumentException("period start date must be before or equal to end date");
+        }
+    }
+
+    private void requirePeriod(LocalDateTime from, LocalDateTime to) {
         Objects.requireNonNull(from, "period start date is required");
         Objects.requireNonNull(to, "period end date is required");
         if (from.isAfter(to)) {
@@ -267,6 +313,9 @@ public final class NetWorthCalculator {
     }
 
     public enum TimeBucketUnit {
+        SECONDS,
+        MINUTES,
+        HOURS,
         DAYS,
         WEEKS,
         MONTHS
@@ -279,6 +328,18 @@ public final class NetWorthCalculator {
                 throw new IllegalArgumentException("time bucket amount must be positive");
             }
             unit = Objects.requireNonNull(unit, "time bucket unit is required");
+        }
+
+        public static TimeBucket seconds(int amount) {
+            return new TimeBucket(amount, TimeBucketUnit.SECONDS);
+        }
+
+        public static TimeBucket minutes(int amount) {
+            return new TimeBucket(amount, TimeBucketUnit.MINUTES);
+        }
+
+        public static TimeBucket hours(int amount) {
+            return new TimeBucket(amount, TimeBucketUnit.HOURS);
         }
 
         public static TimeBucket days(int amount) {
@@ -295,9 +356,20 @@ public final class NetWorthCalculator {
 
         LocalDate next(LocalDate date) {
             return switch (unit) {
-                case DAYS -> date.plusDays(amount);
+                case SECONDS, MINUTES, HOURS, DAYS -> date.plusDays(amount);
                 case WEEKS -> date.plus(amount, ChronoUnit.WEEKS);
                 case MONTHS -> date.plusMonths(amount);
+            };
+        }
+
+        LocalDateTime next(LocalDateTime dateTime) {
+            return switch (unit) {
+                case SECONDS -> dateTime.plusSeconds(amount);
+                case MINUTES -> dateTime.plusMinutes(amount);
+                case HOURS -> dateTime.plusHours(amount);
+                case DAYS -> dateTime.plusDays(amount);
+                case WEEKS -> dateTime.plusWeeks(amount);
+                case MONTHS -> dateTime.plusMonths(amount);
             };
         }
     }
@@ -339,28 +411,15 @@ public final class NetWorthCalculator {
     }
 
     public record AccountValuation(UUID accountId, String accountName, MoneyAmount value) {
-
-        public AccountValuation {
-            accountId = Objects.requireNonNull(accountId, "account id is required");
-            value = Objects.requireNonNull(value, "account value is required");
-        }
     }
 
     public record AssetTypeValuation(AssetType assetType, MoneyAmount value, Percentage allocation) {
-
-        public AssetTypeValuation {
-            assetType = Objects.requireNonNull(assetType, "asset type is required");
-            value = Objects.requireNonNull(value, "asset type value is required");
-            allocation = Objects.requireNonNull(allocation, "asset allocation is required");
-        }
     }
 
     public record NetWorthSeriesPoint(LocalDate valueDate, MoneyAmount value) {
+    }
 
-        public NetWorthSeriesPoint {
-            valueDate = Objects.requireNonNull(valueDate, "series point date is required");
-            value = Objects.requireNonNull(value, "series point value is required");
-        }
+    public record NetWorthTemporalSeriesPoint(LocalDateTime valueDate, MoneyAmount value) {
     }
 
     public record PerformanceSummary(
@@ -374,17 +433,5 @@ public final class NetWorthCalculator {
             MoneyAmount flowAdjustedGain,
             Optional<Percentage> flowAdjustedGainPercentage
     ) {
-
-        public PerformanceSummary {
-            from = Objects.requireNonNull(from, "performance start date is required");
-            to = Objects.requireNonNull(to, "performance end date is required");
-            startValue = Objects.requireNonNull(startValue, "start value is required");
-            endValue = Objects.requireNonNull(endValue, "end value is required");
-            grossChange = Objects.requireNonNull(grossChange, "gross change is required");
-            grossChangePercentage = Objects.requireNonNull(grossChangePercentage, "gross change percentage is required");
-            netExternalFlow = Objects.requireNonNull(netExternalFlow, "net external flow is required");
-            flowAdjustedGain = Objects.requireNonNull(flowAdjustedGain, "flow adjusted gain is required");
-            flowAdjustedGainPercentage = Objects.requireNonNull(flowAdjustedGainPercentage, "flow adjusted gain percentage is required");
-        }
     }
 }
