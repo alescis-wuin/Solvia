@@ -1,9 +1,10 @@
 package fr.seynax.solvia.desktop.ui;
 
-import javafx.scene.control.ContextMenu;
+import javafx.geometry.Side;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.HBox;
+import javafx.scene.shape.SVGPath;
 
 public final class DashboardQuickLinksCard extends HBox {
 
@@ -11,14 +12,15 @@ public final class DashboardQuickLinksCard extends HBox {
     private final MenuItem dataEntry = new MenuItem("Saisie");
     private final MenuItem assets = new MenuItem("Actifs & positions");
     private final MenuItem accounts = new MenuItem("Comptes");
+    private final MenuItem system = new MenuItem("Système");
     private final MenuItem refresh = new MenuItem("Actualiser");
 
     public DashboardQuickLinksCard() {
         getStyleClass().add("dashboard-toolbar");
         menu.getStyleClass().addAll("hamburger-menu", "icon-hamburger");
         menu.setText("☰");
-        menu.setPopupSide(javafx.geometry.Side.BOTTOM);
-        menu.getItems().addAll(dataEntry, assets, accounts, refresh);
+        menu.setPopupSide(Side.BOTTOM);
+        menu.getItems().addAll(dataEntry, assets, accounts, system, refresh);
         decorateMenuItems();
         getChildren().add(menu);
     }
@@ -35,6 +37,10 @@ public final class DashboardQuickLinksCard extends HBox {
         accounts.setOnAction(event -> execute(task));
     }
 
+    public void onSystem(Runnable task) {
+        system.setOnAction(event -> execute(task));
+    }
+
     public void onRefresh(Runnable task) {
         refresh.setOnAction(event -> execute(task));
     }
@@ -44,10 +50,15 @@ public final class DashboardQuickLinksCard extends HBox {
     }
 
     private void decorateMenuItems() {
-        dataEntry.setGraphic(Ui.style(new javafx.scene.shape.SVGPath(), "menu-icon", "icon-entry"));
-        assets.setGraphic(Ui.style(new javafx.scene.shape.SVGPath(), "menu-icon", "icon-assets"));
-        accounts.setGraphic(Ui.style(new javafx.scene.shape.SVGPath(), "menu-icon", "icon-accounts"));
-        refresh.setGraphic(Ui.style(new javafx.scene.shape.SVGPath(), "menu-icon", "icon-refresh"));
+        dataEntry.setGraphic(icon("icon-entry"));
+        assets.setGraphic(icon("icon-assets"));
+        accounts.setGraphic(icon("icon-accounts"));
+        system.setGraphic(icon("icon-system"));
+        refresh.setGraphic(icon("icon-refresh"));
+    }
+
+    private SVGPath icon(String styleClass) {
+        return Ui.style(new SVGPath(), "menu-icon", styleClass);
     }
 
     private void execute(Runnable task) {
