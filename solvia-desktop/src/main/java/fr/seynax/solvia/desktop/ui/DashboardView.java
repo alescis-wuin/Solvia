@@ -31,10 +31,14 @@ public final class DashboardView extends VBox {
     private boolean loadedOnce;
 
     public DashboardView(SolviaApiClient apiClient) {
-        this(apiClient, null, null);
+        this(apiClient, null, null, null);
     }
 
     public DashboardView(SolviaApiClient apiClient, Runnable openDataEntry, Runnable openAccounts) {
+        this(apiClient, openDataEntry, openAccounts, null);
+    }
+
+    public DashboardView(SolviaApiClient apiClient, Runnable openDataEntry, Runnable openAccounts, Runnable openAssets) {
         this.apiClient = apiClient;
         getStyleClass().add("content-view");
         setSpacing(18);
@@ -43,6 +47,7 @@ public final class DashboardView extends VBox {
         quickLinks.onRefresh(this::refresh);
         quickLinks.onDataEntry(openDataEntry);
         quickLinks.onAccounts(openAccounts);
+        quickLinks.onAssets(openAssets);
         getChildren().addAll(filters, quickLinks, metrics, state, dashboardBody());
         VBox.setVgrow(chart, Priority.ALWAYS);
         showWaitingState("Verification du backend local...");
