@@ -2,9 +2,11 @@ package fr.seynax.solvia.desktop.ui;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -36,6 +38,7 @@ public final class AccountsView extends VBox {
     private final TableView<AccountSnapshotRow> snapshotTable = new TableView<>();
     private final Label accountDetail = Ui.help("Sélectionne un compte pour afficher son détail et son dernier solde connu.");
 
+    private final TextField filter = Ui.tooltip(new TextField(), "Filtre les comptes par nom, type, enveloppe, devise ou état.");
     private final TextField name = Ui.tooltip(new TextField(), "Nom lisible du compte, par exemple Compte courant ou PEA.");
     private final ComboBox<String> type = Ui.tooltip(new ComboBox<>(), "Catégorie technique du compte.");
     private final ComboBox<String> envelopeType = Ui.tooltip(new ComboBox<>(), "Enveloppe patrimoniale utilisée pour l'allocation.");
@@ -48,6 +51,7 @@ public final class AccountsView extends VBox {
 
     private volatile boolean backendReady;
     private AccountDto selectedAccount;
+    private List<AccountDto> currentAccounts = List.of();
     private Runnable onAccountsChanged = () -> { };
 
     public AccountsView(SolviaApiClient apiClient) {
@@ -57,6 +61,7 @@ public final class AccountsView extends VBox {
         setPadding(new Insets(20));
         configureCombos();
         configureTables();
+        filter.textProperty().addListener((observable, previous, value) -> renderAccounts());
         getChildren().addAll(content(), state, empty);
         setInputsDisabled(true);
         state.show("Vérification", "Vérification du backend local...", "state-info");
@@ -97,7 +102,8 @@ public final class AccountsView extends VBox {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
                 return;
             }
-            table.getItems().setAll(accounts.stream().map(AccountRow::from).toList());
+            currentAccounts = List.copyOf(accounts);
+            renderAccounts();
             reselect(previousSelection);
             if (accounts.isEmpty()) {
                 empty.show("Aucun compte", "Crée un premier compte pour commencer la saisie patrimoniale.");
@@ -143,7 +149,9 @@ public final class AccountsView extends VBox {
     }
 
     private SectionCard tableSection() {
-        return new SectionCard("Comptes", "Sélectionne une ligne pour modifier le compte et inspecter son historique.", table);
+        VBox content = new VBox(10, filter, table);
+        VBox.setVgrow(table, Priority.ALWAYS);
+        return new SectionCard("Comptes", "Sélectionne une ligne ou utilise les actions inline.", content);
     }
 
     private SectionCard detailSection() {
@@ -173,12 +181,12 @@ public final class AccountsView extends VBox {
         currencyColumn.setCellValueFactory(new PropertyValueFactory<>("currencyCode"));
         TableColumn<AccountRow, String> activeColumn = new TableColumn<>("État");
         activeColumn.setCellValueFactory(new PropertyValueFactory<>("active"));
-        table.getColumns().setAll(nameColumn, typeColumn, envelopeColumn, currencyColumn, activeColumn);
+        TableColumn<AccountRow, HBox> actionsColumn = new TableColumn<>("Actions");
+        actionsColumn.setCellValueFactory(data -> new SimpleObjectProperty<>(accountActions(data.getValue())));
+        table.getColumns().setAll(nameColumn, typeColumn, envelopeColumn, currencyColumn, activeColumn, actionsColumn);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         table.setPrefHeight(360);
-        table.getSelectionModel().selectedItemProperty().addListener((observable, previous, selected) -> {
-            selectAccount(selected == null ? null : selected.account());
-        });
+        table.getSelectionModel().selectedItemProperty().addListener((observable, previous, selected) -> selectAccount(selected == null ? null : selected.account()));
 
         TableColumn<AccountSnapshotRow, String> dateColumn = new TableColumn<>("Date");
         dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
@@ -193,6 +201,30 @@ public final class AccountsView extends VBox {
         snapshotTable.setPrefHeight(260);
     }
 
+    private HBox accountActions(AccountRow row) {
+        Button open = Ui.tooltip(new Button("Ouvrir"), "Sélectionne ce compte.");
+        open.setOnAction(event -> table.getSelectionModel().select(row));
+        Button disable = Ui.tooltip(new Button("Désactiver"), "Désactive ce compte après confirmation.");
+        disable.setDisable(!row.account().active());
+        disable.setOnAction(event -> {
+            table.getSelectionModel().select(row);
+            deactivateAccount();
+        });
+        return new HBox(6, open, disable);
+    }
+
+    private void renderAccounts() {
+        String query = normalized(filter.getText());
+        table.getItems().setAll(currentAccounts.stream()
+                .filter(account -> query.isBlank() || normalized(account.name()).contains(query)
+                        || normalized(account.type()).contains(query)
+                        || normalized(account.envelopeType()).contains(query)
+                        || normalized(account.currencyCode()).contains(query)
+                        || normalized(status(account.active())).contains(query))
+                .map(AccountRow::from)
+                .toList());
+    }
+
     private void createAccount() {
         if (!backendReady) {
             state.show("Backend non prêt", "Backend local non prêt.", "state-warning");
@@ -202,12 +234,7 @@ public final class AccountsView extends VBox {
         if (updateRequest == null) {
             return;
         }
-        AccountCreateDto request = new AccountCreateDto(
-                updateRequest.name(),
-                updateRequest.type(),
-                updateRequest.envelopeType(),
-                updateRequest.currencyCode()
-        );
+        AccountCreateDto request = new AccountCreateDto(updateRequest.name(), updateRequest.type(), updateRequest.envelopeType(), updateRequest.currencyCode());
         create.setDisable(true);
         state.show("Création", "Création du compte...", "state-info");
         apiClient.createAccount(request).whenComplete((account, error) -> Platform.runLater(() -> {
@@ -250,6 +277,13 @@ public final class AccountsView extends VBox {
     private void deactivateAccount() {
         if (selectedAccount == null) {
             state.show("Sélection requise", "Sélectionner un compte avant désactivation.", "state-warning");
+            return;
+        }
+        if (!Ui.confirm(
+                "Désactiver le compte",
+                "Désactiver « " + selectedAccount.name() + " » ?",
+                "Le compte ne sera pas supprimé. Son historique restera disponible et pourra encore être utilisé pour les anciens calculs."
+        )) {
             return;
         }
         deactivate.setDisable(true);
@@ -307,9 +341,7 @@ public final class AccountsView extends VBox {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
                 return;
             }
-            List<AccountSnapshotDto> sorted = snapshots.stream()
-                    .sorted(snapshotComparator())
-                    .toList();
+            List<AccountSnapshotDto> sorted = snapshots.stream().sorted(snapshotComparator()).toList();
             snapshotTable.getItems().setAll(sorted.stream().map(AccountSnapshotRow::from).toList());
             if (selectedAccount != null && selectedAccount.id().equals(accountId)) {
                 renderAccountDetail(selectedAccount, sorted);
@@ -363,6 +395,7 @@ public final class AccountsView extends VBox {
     }
 
     private void setInputsDisabled(boolean disabled) {
+        filter.setDisable(disabled);
         name.setDisable(disabled);
         type.setDisable(disabled);
         envelopeType.setDisable(disabled);
@@ -375,10 +408,15 @@ public final class AccountsView extends VBox {
 
     private void clearData() {
         selectedAccount = null;
+        currentAccounts = List.of();
         table.getItems().clear();
         snapshotTable.getItems().clear();
         clearAccountForm();
         accountDetail.setText("Sélectionne un compte pour afficher son détail et son dernier solde connu.");
+    }
+
+    private String normalized(String value) {
+        return value == null ? "" : value.strip().toLowerCase(Locale.ROOT);
     }
 
     private String status(boolean active) {
@@ -438,14 +476,7 @@ public final class AccountsView extends VBox {
         }
 
         static AccountRow from(AccountDto account) {
-            return new AccountRow(
-                    account,
-                    account.name(),
-                    account.type(),
-                    account.envelopeType(),
-                    account.currencyCode(),
-                    account.active() ? "Actif" : "Inactif"
-            );
+            return new AccountRow(account, account.name(), account.type(), account.envelopeType(), account.currencyCode(), account.active() ? "Actif" : "Inactif");
         }
 
         AccountDto account() {
