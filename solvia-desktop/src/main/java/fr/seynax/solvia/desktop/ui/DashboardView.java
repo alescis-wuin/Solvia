@@ -31,14 +31,18 @@ public final class DashboardView extends VBox {
     private boolean loadedOnce;
 
     public DashboardView(SolviaApiClient apiClient) {
-        this(apiClient, null, null, null);
+        this(apiClient, null, null, null, null);
     }
 
     public DashboardView(SolviaApiClient apiClient, Runnable openDataEntry, Runnable openAccounts) {
-        this(apiClient, openDataEntry, openAccounts, null);
+        this(apiClient, null, openDataEntry, openAccounts, null);
     }
 
     public DashboardView(SolviaApiClient apiClient, Runnable openDataEntry, Runnable openAccounts, Runnable openAssets) {
+        this(apiClient, null, openDataEntry, openAccounts, openAssets);
+    }
+
+    public DashboardView(SolviaApiClient apiClient, DesktopEventBus eventBus, Runnable openDataEntry, Runnable openAccounts, Runnable openAssets) {
         this.apiClient = apiClient;
         getStyleClass().add("content-view");
         setSpacing(18);
