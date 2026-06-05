@@ -1,6 +1,7 @@
 package fr.seynax.solvia.desktop.ui;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -101,7 +102,7 @@ public final class DashboardChartCard extends SectionCard {
 
     public void update(List<SeriesPointDto> points) {
         List<ChartPoint> sourcePoints = normalize(points);
-        List<ChartPoint> chartPoints = compressPlateaus(sourcePoints);
+        List<ChartPoint> chartPoints = focusOnValueChanges(sourcePoints);
         displayedPoints = chartPoints;
         hideGuides();
         configureAxes(chartPoints);
@@ -139,7 +140,7 @@ public final class DashboardChartCard extends SectionCard {
         NumberAxis xAxis = new NumberAxis();
         NumberAxis yAxis = new NumberAxis();
         xAxis.setLabel("Date / heure");
-        yAxis.setLabel("Patrimoine");
+        yAxis.setLabel("Patrimoine total");
         xAxis.setForceZeroInRange(false);
         yAxis.setForceZeroInRange(false);
         xAxis.setAutoRanging(false);
@@ -156,7 +157,7 @@ public final class DashboardChartCard extends SectionCard {
         lineChart.setVerticalGridLinesVisible(true);
         lineChart.setAlternativeColumnFillVisible(false);
         lineChart.setAlternativeRowFillVisible(false);
-        lineChart.setAccessibleText("Graphique de l'historique du patrimoine avec axes dynamiques, dates précises et infobulle au survol.");
+        lineChart.setAccessibleText("Graphique de l'historique du patrimoine total avec axes dynamiques, dates précises et infobulle au survol.");
 
         Line verticalGuide = guideLine();
         Line horizontalGuide = guideLine();
@@ -371,7 +372,7 @@ public final class DashboardChartCard extends SectionCard {
         horizontalGuide.setStartY(position.getY());
         horizontalGuide.setEndY(position.getY());
 
-        hoverLabel.setText(formatPreciseDate(point.date()) + "\n" + DesktopFormatters.money(point.source().value()));
+        hoverLabel.setText("Patrimoine total calculé\n" + formatPreciseDate(point.date()) + "\n" + DesktopFormatters.money(point.source().value()));
         hoverLabel.autosize();
         double labelX = clamp(position.getX() + 12, plotBounds.getMinX() + 6, plotBounds.getMaxX() - hoverLabel.prefWidth(-1) - 6);
         double labelY = clamp(position.getY() - hoverLabel.prefHeight(-1) - 12, plotBounds.getMinY() + 6, plotBounds.getMaxY() - hoverLabel.prefHeight(-1) - 6);
@@ -393,7 +394,7 @@ public final class DashboardChartCard extends SectionCard {
         if (node == null || point == null) {
             return;
         }
-        Tooltip tooltip = new Tooltip(formatPreciseDate(point.date()) + "\n" + DesktopFormatters.money(point.source().value()));
+        Tooltip tooltip = new Tooltip("Patrimoine total calculé\n" + formatPreciseDate(point.date()) + "\n" + DesktopFormatters.money(point.source().value()));
         tooltip.getStyleClass().add("chart-tooltip");
         Tooltip.install(node, tooltip);
     }
@@ -423,33 +424,44 @@ public final class DashboardChartCard extends SectionCard {
     }
 
     private ChartPoint chartPoint(SeriesPointDto point) {
+        BigDecimal roundedAmount = point.value().amount().setScale(2, RoundingMode.HALF_UP);
         double x = point.valueDate().atZone(DISPLAY_ZONE).toInstant().toEpochMilli();
-        double y = point.value().amount().doubleValue();
-        return new ChartPoint(point, point.valueDate(), x, y);
+        double y = roundedAmount.doubleValue();
+        return new ChartPoint(point, point.valueDate(), x, y, roundedAmount);
     }
 
-    private List<ChartPoint> compressPlateaus(List<ChartPoint> points) {
+    private List<ChartPoint> focusOnValueChanges(List<ChartPoint> points) {
         if (points.size() <= 2) {
             return points;
         }
-        List<ChartPoint> compressed = new ArrayList<>();
-        compressed.add(points.get(0));
-        for (int index = 1; index < points.size() - 1; index++) {
+        List<ChartPoint> changes = new ArrayList<>();
+        for (int index = 1; index < points.size(); index++) {
             ChartPoint previous = points.get(index - 1);
             ChartPoint current = points.get(index);
-            ChartPoint next = points.get(index + 1);
-            if (!sameAmount(previous, current) || !sameAmount(current, next)) {
-                compressed.add(current);
+            if (!sameAmount(previous, current)) {
+                addIfNew(changes, previous);
+                addIfNew(changes, current);
             }
         }
-        compressed.add(points.get(points.size() - 1));
-        return List.copyOf(compressed);
+        if (changes.isEmpty()) {
+            return List.of(points.get(0), points.get(points.size() - 1));
+        }
+        return List.copyOf(changes);
+    }
+
+    private void addIfNew(List<ChartPoint> points, ChartPoint candidate) {
+        if (points.isEmpty()) {
+            points.add(candidate);
+            return;
+        }
+        ChartPoint last = points.get(points.size() - 1);
+        if (Double.compare(last.x(), candidate.x()) != 0 || last.roundedAmount().compareTo(candidate.roundedAmount()) != 0) {
+            points.add(candidate);
+        }
     }
 
     private boolean sameAmount(ChartPoint first, ChartPoint second) {
-        BigDecimal firstAmount = first.source().value().amount();
-        BigDecimal secondAmount = second.source().value().amount();
-        return firstAmount.compareTo(secondAmount) == 0;
+        return first.roundedAmount().compareTo(second.roundedAmount()) == 0;
     }
 
     private String summaryText(int sourceCount, int displayedCount) {
@@ -457,8 +469,9 @@ public final class DashboardChartCard extends SectionCard {
             return displayedCount + " point" + plural(displayedCount) + " affiché" + plural(displayedCount) + ".";
         }
         int hidden = sourceCount - displayedCount;
-        return displayedCount + " point" + plural(displayedCount) + " affiché" + plural(displayedCount)
-                + " — " + hidden + " point" + plural(hidden) + " redondant" + plural(hidden) + " masqué" + plural(hidden) + " sur plateau inchangé.";
+        return displayedCount + " point" + plural(displayedCount) + " utile" + plural(displayedCount)
+                + " affiché" + plural(displayedCount) + " — " + hidden + " point" + plural(hidden)
+                + " sans changement visible masqué" + plural(hidden) + ".";
     }
 
     private String formatTickDate(long epochMillis) {
@@ -557,7 +570,7 @@ public final class DashboardChartCard extends SectionCard {
         return count > 1 ? "s" : "";
     }
 
-    private record ChartPoint(SeriesPointDto source, LocalDateTime date, double x, double y) {
+    private record ChartPoint(SeriesPointDto source, LocalDateTime date, double x, double y, BigDecimal roundedAmount) {
     }
 
     private record ChartParts(
