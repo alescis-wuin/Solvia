@@ -101,6 +101,66 @@
 .table-row-cell { -fx-cell-size: 42px; }
 .table-view .column-header .label { -fx-font-weight: 900; }
 .dashboard-chart-layer { -fx-min-height: 420px; }
+.chart-axis-selector {
+    -fx-padding: 14px;
+    -fx-spacing: 10px;
+    -fx-background-color: derive(-solvia-surface, 8%);
+    -fx-border-color: rgba(136, 184, 255, 0.42);
+    -fx-border-width: 1px;
+    -fx-background-radius: 18px;
+    -fx-border-radius: 18px;
+}
+.axis-selector-title {
+    -fx-font-weight: 900;
+    -fx-font-size: 17px;
+    -fx-text-fill: -solvia-accent;
+}
+.axis-mode-row {
+    -fx-spacing: 8px;
+}
+.axis-mode-button {
+    -fx-min-height: 38px;
+    -fx-padding: 7px 14px;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+    -fx-border-color: -solvia-border;
+}
+.axis-mode-button:selected {
+    -fx-border-color: -solvia-accent;
+    -fx-background-color: -solvia-raised;
+    -fx-text-fill: -solvia-accent;
+}
+.axis-grid {
+    -fx-hgap: 10px;
+    -fx-vgap: 8px;
+}
+.axis-field-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -solvia-muted;
+}
+.axis-field {
+    -fx-pref-width: 190px;
+    -fx-min-height: 40px;
+    -fx-pref-height: 40px;
+}
+.axis-unit-box {
+    -fx-pref-width: 82px;
+    -fx-min-height: 40px;
+    -fx-pref-height: 40px;
+}
+.axis-actions {
+    -fx-spacing: 8px;
+}
+.axis-primary-action {
+    -fx-border-color: -solvia-accent;
+    -fx-border-width: 2px;
+}
+.axis-secondary-action {
+    -fx-border-color: -solvia-border;
+    -fx-border-width: 1px;
+}
 .chart {
     -fx-padding: 10px;
 }
