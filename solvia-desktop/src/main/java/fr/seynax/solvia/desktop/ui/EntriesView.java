@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
@@ -59,6 +60,9 @@ public final class EntriesView extends VBox {
     private final TableView<SnapshotEntryRow> snapshotHistory = new TableView<>();
     private final TableView<CashFlowRow> cashFlowHistory = new TableView<>();
 
+    private final AtomicLong accountsGeneration = new AtomicLong();
+    private final AtomicLong snapshotHistoryGeneration = new AtomicLong();
+    private final AtomicLong cashFlowHistoryGeneration = new AtomicLong();
     private volatile boolean backendReady;
     private List<AccountDto> currentAccounts = List.of();
     private List<AccountSnapshotDto> currentSnapshotHistory = List.of();
@@ -86,13 +90,18 @@ public final class EntriesView extends VBox {
     }
 
     public void backendStatusChanged(BackendStatusSnapshot snapshot) {
-        backendReady = snapshot.canLoadData();
         if (snapshot.state() == BackendConnectionState.CHECKING) {
-            setInputsDisabled(true);
-            state.show("Vérification", "Vérification du backend local...", "state-info");
+            if (!backendReady && currentAccounts.isEmpty()) {
+                setInputsDisabled(true);
+                state.show("Vérification", "Vérification du backend local...", "state-info");
+            }
             return;
         }
+        backendReady = snapshot.canLoadData();
         if (!backendReady) {
+            accountsGeneration.incrementAndGet();
+            snapshotHistoryGeneration.incrementAndGet();
+            cashFlowHistoryGeneration.incrementAndGet();
             setInputsDisabled(true);
             clearData();
             empty.show("Backend indisponible", "La saisie sera disponible quand le backend local sera connecté.");
@@ -108,13 +117,20 @@ public final class EntriesView extends VBox {
             state.show("Backend non prêt", "Backend local non prêt.", "state-warning");
             return;
         }
+        long generation = accountsGeneration.incrementAndGet();
         UUID previousSnapshotAccount = snapshotAccount.getValue() == null ? null : snapshotAccount.getValue().id();
         UUID previousFlowAccount = flowAccount.getValue() == null ? null : flowAccount.getValue().id();
+        FocusSnapshot focus = FocusSnapshot.capture(this);
         empty.hide();
         state.show("Chargement", "Chargement des comptes...", "state-info");
         apiClient.accounts().whenComplete((accounts, error) -> Platform.runLater(() -> {
+            if (generation != accountsGeneration.get()) {
+                focus.restoreLater();
+                return;
+            }
             if (error != null) {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
+                focus.restoreLater();
                 return;
             }
             currentAccounts = List.copyOf(accounts);
@@ -135,6 +151,7 @@ public final class EntriesView extends VBox {
                 loadSnapshotHistory(snapshotAccount.getValue());
                 loadCashFlowHistory(flowAccount.getValue());
             }
+            focus.restoreLater();
         }));
     }
 
@@ -258,34 +275,52 @@ public final class EntriesView extends VBox {
     }
 
     private void loadSnapshotHistory(AccountDto account) {
-        currentSnapshotHistory = List.of();
-        renderSnapshotHistory();
+        long generation = snapshotHistoryGeneration.incrementAndGet();
+        FocusSnapshot focus = FocusSnapshot.capture(this);
         if (account == null) {
+            currentSnapshotHistory = List.of();
+            renderSnapshotHistory();
+            focus.restoreLater();
             return;
         }
         apiClient.accountSnapshots(account.id()).whenComplete((snapshots, error) -> Platform.runLater(() -> {
+            if (generation != snapshotHistoryGeneration.get() || snapshotAccount.getValue() == null || !snapshotAccount.getValue().id().equals(account.id())) {
+                focus.restoreLater();
+                return;
+            }
             if (error != null) {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
+                focus.restoreLater();
                 return;
             }
             currentSnapshotHistory = snapshots.stream().sorted(snapshotComparator()).toList();
             renderSnapshotHistory();
+            focus.restoreLater();
         }));
     }
 
     private void loadCashFlowHistory(AccountDto account) {
-        currentCashFlows = List.of();
-        renderCashFlowHistory();
+        long generation = cashFlowHistoryGeneration.incrementAndGet();
+        FocusSnapshot focus = FocusSnapshot.capture(this);
         if (account == null) {
+            currentCashFlows = List.of();
+            renderCashFlowHistory();
+            focus.restoreLater();
             return;
         }
         apiClient.cashFlows(account.id()).whenComplete((cashFlows, error) -> Platform.runLater(() -> {
+            if (generation != cashFlowHistoryGeneration.get() || flowAccount.getValue() == null || !flowAccount.getValue().id().equals(account.id())) {
+                focus.restoreLater();
+                return;
+            }
             if (error != null) {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
+                focus.restoreLater();
                 return;
             }
             currentCashFlows = cashFlows.stream().sorted(cashFlowComparator()).toList();
             renderCashFlowHistory();
+            focus.restoreLater();
         }));
     }
 
