@@ -2,8 +2,10 @@ package fr.seynax.solvia.domain.calculation;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -33,6 +35,7 @@ import fr.seynax.solvia.domain.money.Percentage;
 public final class NetWorthCalculator {
 
     private static final MathContext MATH_CONTEXT = MathContext.DECIMAL128;
+    private static final ZoneId TEMPORAL_SERIES_ZONE = ZoneId.systemDefault();
 
     public NetWorthValuation valueAt(CalculationData data, LocalDate valueDate, CurrencyCode reportingCurrency) {
         Objects.requireNonNull(data, "calculation data is required");
@@ -168,13 +171,38 @@ public final class NetWorthCalculator {
             LocalDateTime next = bucket.next(cursor);
             LocalDateTime bucketEnd = min(to, next.minusNanos(1));
             MoneyAmount value = switch (aggregationMode) {
-                case LAST_KNOWN -> valueAt(data, bucketEnd.toLocalDate(), reportingCurrency).total();
+                case LAST_KNOWN -> valueAt(data, bucketEnd, reportingCurrency);
                 case AVERAGE -> averageDailyValue(data, cursor.toLocalDate(), bucketEnd.toLocalDate(), reportingCurrency);
             };
             points.add(new NetWorthTemporalSeriesPoint(cursor, value));
             cursor = next;
         }
         return List.copyOf(points);
+    }
+
+    private MoneyAmount valueAt(CalculationData data, LocalDateTime valueDateTime, CurrencyCode reportingCurrency) {
+        Objects.requireNonNull(data, "calculation data is required");
+        Objects.requireNonNull(valueDateTime, "value date time is required");
+        Objects.requireNonNull(reportingCurrency, "reporting currency is required");
+
+        LocalDate valueDate = valueDateTime.toLocalDate();
+        MoneyAmount total = MoneyAmount.zero(reportingCurrency);
+
+        for (Account account : data.accounts()) {
+            Optional<AccountBalanceSnapshot> snapshot = latestAccountSnapshot(data, account.id(), valueDateTime);
+            if (snapshot.isPresent()) {
+                total = total.plus(convert(snapshot.get().balance(), reportingCurrency, valueDate, data.fxRates()));
+            }
+        }
+
+        for (Position position : data.positions()) {
+            Optional<PositionSnapshot> snapshot = latestPositionSnapshot(data, position.id(), valueDateTime);
+            if (snapshot.isPresent()) {
+                total = total.plus(convert(snapshot.get().marketValue(), reportingCurrency, valueDate, data.fxRates()));
+            }
+        }
+
+        return total;
     }
 
     private MoneyAmount externalFlow(CalculationData data, LocalDate from, LocalDate to, CurrencyCode reportingCurrency) {
@@ -212,12 +240,40 @@ public final class NetWorthCalculator {
                         .thenComparing(AccountBalanceSnapshot::recordedAt));
     }
 
+    private Optional<AccountBalanceSnapshot> latestAccountSnapshot(CalculationData data, UUID accountId, LocalDateTime valueDateTime) {
+        return data.accountSnapshots().stream()
+                .filter(snapshot -> snapshot.accountId().equals(accountId))
+                .filter(snapshot -> isVisibleAt(snapshot.valueDate(), snapshot.recordedAt(), valueDateTime))
+                .max(Comparator.comparing(AccountBalanceSnapshot::valueDate)
+                        .thenComparing(AccountBalanceSnapshot::recordedAt));
+    }
+
     private Optional<PositionSnapshot> latestPositionSnapshot(CalculationData data, UUID positionId, LocalDate valueDate) {
         return data.positionSnapshots().stream()
                 .filter(snapshot -> snapshot.positionId().equals(positionId))
                 .filter(snapshot -> !snapshot.valueDate().isAfter(valueDate))
                 .max(Comparator.comparing(PositionSnapshot::valueDate)
                         .thenComparing(PositionSnapshot::recordedAt));
+    }
+
+    private Optional<PositionSnapshot> latestPositionSnapshot(CalculationData data, UUID positionId, LocalDateTime valueDateTime) {
+        return data.positionSnapshots().stream()
+                .filter(snapshot -> snapshot.positionId().equals(positionId))
+                .filter(snapshot -> isVisibleAt(snapshot.valueDate(), snapshot.recordedAt(), valueDateTime))
+                .max(Comparator.comparing(PositionSnapshot::valueDate)
+                        .thenComparing(PositionSnapshot::recordedAt));
+    }
+
+    private boolean isVisibleAt(LocalDate valueDate, Instant recordedAt, LocalDateTime valueDateTime) {
+        LocalDate targetDate = valueDateTime.toLocalDate();
+        if (valueDate.isBefore(targetDate)) {
+            return true;
+        }
+        if (valueDate.isAfter(targetDate)) {
+            return false;
+        }
+        Instant cutoff = valueDateTime.atZone(TEMPORAL_SERIES_ZONE).toInstant();
+        return !recordedAt.isAfter(cutoff);
     }
 
     private MoneyAmount convert(MoneyAmount amount, CurrencyCode reportingCurrency, LocalDate valueDate, List<FxRate> fxRates) {
