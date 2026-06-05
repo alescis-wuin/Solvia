@@ -100,7 +100,58 @@
 }
 .table-row-cell { -fx-cell-size: 42px; }
 .table-view .column-header .label { -fx-font-weight: 900; }
-.chart-plot-background { -fx-background-color: #061626; }
+.dashboard-chart-layer { -fx-min-height: 420px; }
+.chart {
+    -fx-padding: 10px;
+}
+.chart-plot-background {
+    -fx-background-color: #061626;
+}
+.chart-horizontal-grid-lines, .chart-vertical-grid-lines {
+    -fx-stroke: rgba(196, 213, 234, 0.24);
+    -fx-stroke-width: 1px;
+}
+.chart-horizontal-zero-line, .chart-vertical-zero-line {
+    -fx-stroke: rgba(116, 255, 208, 0.45);
+    -fx-stroke-width: 1.2px;
+}
+.chart-series-line {
+    -fx-stroke: -solvia-accent;
+    -fx-stroke-width: 2.4px;
+}
+.chart-line-symbol {
+    -fx-background-color: -solvia-accent, #061626;
+    -fx-background-insets: 0, 2;
+    -fx-background-radius: 7px;
+    -fx-padding: 6px;
+}
+.axis {
+    -fx-tick-label-fill: -solvia-muted;
+}
+.axis-label {
+    -fx-text-fill: -solvia-muted;
+    -fx-font-weight: 900;
+}
+.chart-hover-line {
+    -fx-stroke: -solvia-accent-2;
+    -fx-stroke-width: 1.4px;
+    -fx-opacity: 0.92;
+}
+.chart-hover-label {
+    -fx-font-family: "Hack", "Noto Sans Mono", "monospace";
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-padding: 9px 12px;
+    -fx-background-color: #eef6ff;
+    -fx-text-fill: #07111f;
+    -fx-background-radius: 12px;
+    -fx-border-color: -solvia-accent-2;
+    -fx-border-width: 1px;
+    -fx-border-radius: 12px;
+}
+.chart-summary {
+    -fx-font-size: 14px;
+}
 .chart-tooltip {
     -fx-font-family: "Hack", "Noto Sans Mono", "monospace";
 }
