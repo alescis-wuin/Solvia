@@ -145,7 +145,8 @@ public final class DashboardChartCard extends SectionCard {
         xAxis.setAutoRanging(false);
         yAxis.setAutoRanging(false);
         xAxis.setMinorTickVisible(false);
-        yAxis.setMinorTickCount(4);
+        yAxis.setMinorTickVisible(true);
+        yAxis.setMinorTickCount(3);
 
         LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
         lineChart.setTitle("Historique du patrimoine");
@@ -212,6 +213,7 @@ public final class DashboardChartCard extends SectionCard {
 
     private void configureXAxis(List<ChartPoint> points) {
         if (points.isEmpty()) {
+            xTickUnit = DAY;
             xAxis.setLowerBound(0);
             xAxis.setUpperBound(DAY);
             xAxis.setTickUnit(DAY);
@@ -221,13 +223,19 @@ public final class DashboardChartCard extends SectionCard {
         double max = points.stream().mapToDouble(ChartPoint::x).max().orElse(min);
         if (Double.compare(min, max) == 0) {
             long window = LocalTime.MIDNIGHT.equals(points.get(0).date().toLocalTime()) ? DAY : HOUR;
-            xTickUnit = Math.max(SECOND, window / 2L);
+            xTickUnit = window;
             xAxis.setLowerBound(min - window / 2.0);
             xAxis.setUpperBound(max + window / 2.0);
             xAxis.setTickUnit(xTickUnit);
+        } else if (points.size() <= 2) {
+            long duration = Math.max(SECOND, Math.round(max - min));
+            xTickUnit = duration;
+            xAxis.setLowerBound(min);
+            xAxis.setUpperBound(max);
+            xAxis.setTickUnit(xTickUnit);
         } else {
             long duration = Math.max(1L, Math.round(max - min));
-            xTickUnit = niceTimeTick(duration / 6.0);
+            xTickUnit = niceTimeTick(duration / 5.0);
             long padding = Math.max(xTickUnit / 2L, Math.min(duration / 20L, xTickUnit));
             double lower = Math.floor((min - padding) / xTickUnit) * xTickUnit;
             double upper = Math.ceil((max + padding) / xTickUnit) * xTickUnit;
@@ -253,6 +261,7 @@ public final class DashboardChartCard extends SectionCard {
 
     private void configureYAxis(List<ChartPoint> points) {
         if (points.isEmpty()) {
+            yTickUnit = 1;
             yAxis.setLowerBound(0);
             yAxis.setUpperBound(1);
             yAxis.setTickUnit(1);
@@ -260,22 +269,30 @@ public final class DashboardChartCard extends SectionCard {
         }
         double min = points.stream().mapToDouble(ChartPoint::y).min().orElse(0);
         double max = points.stream().mapToDouble(ChartPoint::y).max().orElse(min);
+        boolean nonNegativeSeries = min >= 0;
         double lower;
         double upper;
         if (Double.compare(min, max) == 0) {
             double base = Math.max(1.0, Math.abs(min));
-            double padding = niceNumber(base * 0.05, false);
+            double padding = niceNumber(base * 0.04, false);
             lower = min - padding;
             upper = max + padding;
+            if (nonNegativeSeries && lower < 0) {
+                lower = 0;
+            }
+            yTickUnit = niceNumber(Math.max((upper - lower) / 2.0, 1.0), true);
         } else {
             double range = max - min;
-            double padding = Math.max(range * 0.08, Math.abs(max) * 0.005);
+            double padding = Math.max(range * 0.06, Math.abs(max) * 0.003);
             lower = min - padding;
             upper = max + padding;
+            yTickUnit = niceNumber((upper - lower) / 5.0, true);
         }
-        yTickUnit = niceNumber((upper - lower) / 6.0, true);
         lower = Math.floor(lower / yTickUnit) * yTickUnit;
         upper = Math.ceil(upper / yTickUnit) * yTickUnit;
+        if (nonNegativeSeries && lower < 0) {
+            lower = 0;
+        }
         if (Double.compare(lower, upper) == 0) {
             upper = lower + yTickUnit;
         }
