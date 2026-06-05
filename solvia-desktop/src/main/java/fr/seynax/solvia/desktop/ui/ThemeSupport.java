@@ -35,6 +35,7 @@ public final class ThemeSupport {
         loadFirstAvailable(HACK_CANDIDATES);
         addStylesheet(scene, "/styles/solvia-dark.css");
         addStylesheet(scene, "/styles/solvia-dashboard.css");
+        addStylesheet(scene, "/styles/solvia-chart-axis.css");
     }
 
     private static void addStylesheet(Scene scene, String resourcePath) {
