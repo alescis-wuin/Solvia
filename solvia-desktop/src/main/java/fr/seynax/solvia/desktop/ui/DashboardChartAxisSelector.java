@@ -3,10 +3,6 @@ package fr.seynax.solvia.desktop.ui;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.List;
-import java.util.Locale;
 
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -21,18 +17,10 @@ import javafx.scene.layout.VBox;
 
 public final class DashboardChartAxisSelector extends VBox {
 
-    private static final Locale DISPLAY_LOCALE = Locale.FRANCE;
-    private static final DateTimeFormatter DISPLAY_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", DISPLAY_LOCALE);
-    private static final List<DateTimeFormatter> DATE_TIME_FORMATTERS = List.of(
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", DISPLAY_LOCALE),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", DISPLAY_LOCALE),
-            DateTimeFormatter.ISO_LOCAL_DATE_TIME
-    );
-
     private final ToggleButton auto = new ToggleButton("Auto");
     private final ToggleButton manual = new ToggleButton("Manuel");
-    private final TextField timeMin = field("2026-06-05 09:00:00");
-    private final TextField timeMax = field("2026-06-05 18:00:00");
+    private final DashboardDateTimeSelector timeMin = new DashboardDateTimeSelector("Début affiché");
+    private final DashboardDateTimeSelector timeMax = new DashboardDateTimeSelector("Fin affichée");
     private final TextField timeStepAmount = field("1");
     private final ComboBox<String> timeStepUnit = new ComboBox<>();
     private final TextField valueMin = field("0");
@@ -76,19 +64,22 @@ public final class DashboardChartAxisSelector extends VBox {
         modeRow.getStyleClass().add("axis-mode-row");
         modeRow.setAlignment(Pos.CENTER_LEFT);
 
-        GridPane grid = new GridPane();
-        grid.getStyleClass().add("axis-grid");
-        grid.setHgap(10);
-        grid.setVgap(8);
-        addRow(grid, 0, "Début", timeMin, "Fin", timeMax);
-        addRow(grid, 1, "Pas horizontal", new HBox(8, timeStepAmount, timeStepUnit), "Pas vertical", valueStep);
-        addRow(grid, 2, "Valeur min", valueMin, "Valeur max", valueMax);
+        HBox timeSelectors = new HBox(12, timeMin, timeMax);
+        timeSelectors.getStyleClass().add("axis-date-time-row");
+        timeSelectors.setAlignment(Pos.TOP_LEFT);
+
+        GridPane numericGrid = new GridPane();
+        numericGrid.getStyleClass().add("axis-grid");
+        numericGrid.setHgap(10);
+        numericGrid.setVgap(8);
+        addRow(numericGrid, 0, "Pas horizontal", new HBox(8, timeStepAmount, timeStepUnit), "Pas vertical", valueStep);
+        addRow(numericGrid, 1, "Valeur min", valueMin, "Valeur max", valueMax);
 
         HBox actions = new HBox(8, fitData, apply, reset);
         actions.getStyleClass().add("axis-actions");
         actions.setAlignment(Pos.CENTER_LEFT);
 
-        getChildren().addAll(header(), modeRow, dataHint, grid, actions, status);
+        getChildren().addAll(header(), modeRow, dataHint, timeSelectors, numericGrid, actions, status);
         setManualControlsDisabled(true);
     }
 
@@ -104,12 +95,14 @@ public final class DashboardChartAxisSelector extends VBox {
         dataBounds = bounds;
         if (bounds == null || !bounds.complete()) {
             dataHint.setText("Aucune donnée de référence.");
+            timeMin.setPromptValue(null);
+            timeMax.setPromptValue(null);
             return;
         }
         dataHint.setText("Données utiles : " + format(bounds.timeMin()) + " → " + format(bounds.timeMax())
                 + " • " + format(bounds.valueMin()) + " → " + format(bounds.valueMax()));
-        timeMin.setPromptText(format(bounds.timeMin()));
-        timeMax.setPromptText(format(bounds.timeMax()));
+        timeMin.setPromptValue(bounds.timeMin());
+        timeMax.setPromptValue(bounds.timeMax());
         valueMin.setPromptText(format(bounds.valueMin()));
         valueMax.setPromptText(format(bounds.valueMax()));
         valueStep.setPromptText("Auto");
@@ -146,8 +139,8 @@ public final class DashboardChartAxisSelector extends VBox {
         manual.setSelected(true);
         setManualControlsDisabled(false);
         try {
-            LocalDateTime parsedTimeMin = parseDateTime(timeMin);
-            LocalDateTime parsedTimeMax = parseDateTime(timeMax);
+            LocalDateTime parsedTimeMin = timeMin.value();
+            LocalDateTime parsedTimeMax = timeMax.value();
             if (parsedTimeMin != null && parsedTimeMax != null && !parsedTimeMin.isBefore(parsedTimeMax)) {
                 throw new IllegalArgumentException("La date min doit être avant la date max.");
             }
@@ -173,8 +166,8 @@ public final class DashboardChartAxisSelector extends VBox {
         }
         manual.setSelected(true);
         setManualControlsDisabled(false);
-        timeMin.setText(format(dataBounds.timeMin()));
-        timeMax.setText(format(dataBounds.timeMax()));
+        timeMin.setValue(dataBounds.timeMin());
+        timeMax.setValue(dataBounds.timeMax());
         valueMin.setText(format(dataBounds.valueMin()));
         valueMax.setText(format(dataBounds.valueMax()));
         valueStep.clear();
@@ -203,22 +196,6 @@ public final class DashboardChartAxisSelector extends VBox {
         valueStep.setDisable(disabled);
         fitData.setDisable(disabled);
         apply.setDisable(disabled);
-    }
-
-    private LocalDateTime parseDateTime(TextField field) {
-        String value = field.getText();
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        String normalized = value.strip().replace('T', ' ');
-        for (DateTimeFormatter formatter : DATE_TIME_FORMATTERS) {
-            try {
-                return LocalDateTime.parse(normalized, formatter);
-            } catch (DateTimeParseException ignored) {
-                // Try the next accepted format.
-            }
-        }
-        throw new IllegalArgumentException("Date invalide : utiliser yyyy-MM-dd HH:mm:ss.");
     }
 
     private Duration parseTimeStep() {
@@ -268,7 +245,7 @@ public final class DashboardChartAxisSelector extends VBox {
     }
 
     private String format(LocalDateTime dateTime) {
-        return dateTime == null ? "—" : DISPLAY_DATE_TIME.format(dateTime);
+        return dateTime == null ? "—" : DashboardDateTimeSelector.SUMMARY_FORMATTER.format(dateTime);
     }
 
     private String format(BigDecimal value) {
