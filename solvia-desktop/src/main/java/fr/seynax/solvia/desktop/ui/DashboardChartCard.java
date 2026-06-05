@@ -2,7 +2,6 @@ package fr.seynax.solvia.desktop.ui;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -24,6 +23,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.shape.Line;
 import javafx.util.StringConverter;
 
