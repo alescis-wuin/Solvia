@@ -18,7 +18,7 @@ import javafx.scene.layout.VBox;
 public final class DashboardDateTimeSelector extends VBox {
 
     private static final Locale DISPLAY_LOCALE = Locale.FRANCE;
-    private static final DateTimeFormatter SUMMARY_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss", DISPLAY_LOCALE);
+    public static final DateTimeFormatter SUMMARY_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss", DISPLAY_LOCALE);
 
     private final Label title;
     private final DatePicker date = new DatePicker();
