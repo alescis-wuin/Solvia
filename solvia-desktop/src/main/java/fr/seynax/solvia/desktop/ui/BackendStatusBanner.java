@@ -40,6 +40,7 @@ public final class BackendStatusBanner extends VBox {
     private final Button startBackend = new Button("Démarrer backend");
     private final Timeline timeline;
     private volatile boolean checking;
+    private BackendStatusSnapshot lastPublishedSnapshot;
 
     public BackendStatusBanner(
             SolviaApiClient apiClient,
@@ -141,6 +142,14 @@ public final class BackendStatusBanner extends VBox {
     }
 
     private void update(BackendStatusSnapshot snapshot) {
+        render(snapshot);
+        if (shouldPublish(snapshot)) {
+            lastPublishedSnapshot = snapshot;
+            statusListener.accept(snapshot);
+        }
+    }
+
+    private void render(BackendStatusSnapshot snapshot) {
         getStyleClass().removeAll(
                 "status-checking",
                 "status-connected",
@@ -154,7 +163,22 @@ public final class BackendStatusBanner extends VBox {
         details.setText(details(snapshot));
         retry.setDisable(snapshot.state() == BackendConnectionState.CHECKING);
         startBackend.setDisable(snapshot.state() == BackendConnectionState.CHECKING || backendLauncher.running());
-        statusListener.accept(snapshot);
+    }
+
+    private boolean shouldPublish(BackendStatusSnapshot snapshot) {
+        if (lastPublishedSnapshot == null) {
+            return true;
+        }
+        if (snapshot.state() == BackendConnectionState.CHECKING) {
+            return !lastPublishedSnapshot.canLoadData()
+                    && lastPublishedSnapshot.state() != BackendConnectionState.CHECKING;
+        }
+        return snapshot.state() != lastPublishedSnapshot.state()
+                || snapshot.canLoadData() != lastPublishedSnapshot.canLoadData()
+                || !Objects.equals(snapshot.baseUrl(), lastPublishedSnapshot.baseUrl())
+                || !Objects.equals(snapshot.databaseStatus(), lastPublishedSnapshot.databaseStatus())
+                || !Objects.equals(snapshot.message(), lastPublishedSnapshot.message())
+                || !Objects.equals(snapshot.technicalMessage(), lastPublishedSnapshot.technicalMessage());
     }
 
     private String details(BackendStatusSnapshot snapshot) {
