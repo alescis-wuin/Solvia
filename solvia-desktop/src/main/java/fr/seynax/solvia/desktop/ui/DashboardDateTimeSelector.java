@@ -93,18 +93,8 @@ public final class DashboardDateTimeSelector extends VBox {
         date.setPromptText(value == null ? "Date" : DateTimeFormatter.ISO_LOCAL_DATE.format(value.toLocalDate()));
     }
 
-    @Override
-    public void setDisable(boolean disabled) {
-        super.setDisable(disabled);
-        date.setDisable(disabled);
-        hour.setDisable(disabled);
-        minute.setDisable(disabled);
-        second.setDisable(disabled);
-        startOfDay.setDisable(disabled);
-        noon.setDisable(disabled);
-        endOfDay.setDisable(disabled);
-        now.setDisable(disabled);
-        clear.setDisable(disabled);
+    public void setControlsDisabled(boolean disabled) {
+        setDisable(disabled);
     }
 
     private void setTime(LocalTime time) {
