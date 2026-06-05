@@ -3,6 +3,7 @@ package fr.seynax.solvia.desktop.ui;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -29,6 +30,8 @@ import javafx.scene.shape.Line;
 import javafx.util.StringConverter;
 
 import fr.seynax.solvia.desktop.api.ApiDtos.SeriesPointDto;
+import fr.seynax.solvia.desktop.ui.DashboardChartAxisSelector.AxisOverrides;
+import fr.seynax.solvia.desktop.ui.DashboardChartAxisSelector.DataBounds;
 
 public final class DashboardChartCard extends SectionCard {
 
@@ -71,6 +74,7 @@ public final class DashboardChartCard extends SectionCard {
     private final NumberAxis xAxis;
     private final NumberAxis yAxis;
     private final LineChart<Number, Number> chart;
+    private final DashboardChartAxisSelector axisSelector;
     private final StackPane chartLayer;
     private final Line verticalGuide;
     private final Line horizontalGuide;
@@ -86,15 +90,17 @@ public final class DashboardChartCard extends SectionCard {
     }
 
     private DashboardChartCard(ChartParts parts) {
-        super("Historique", "Évolution du patrimoine sur la période sélectionnée.", parts.layer(), parts.summary());
+        super("Historique", "Évolution du patrimoine sur la période sélectionnée.", parts.selector(), parts.layer(), parts.summary());
         this.xAxis = parts.xAxis();
         this.yAxis = parts.yAxis();
         this.chart = parts.chart();
+        this.axisSelector = parts.selector();
         this.chartLayer = parts.layer();
         this.verticalGuide = parts.verticalGuide();
         this.horizontalGuide = parts.horizontalGuide();
         this.hoverLabel = parts.hoverLabel();
         this.summary = parts.summary();
+        this.axisSelector.setOnAxisChanged(() -> configureAxes(displayedPoints));
         getChildren().add(empty);
         VBox.setVgrow(chartLayer, Priority.ALWAYS);
         empty.show("Aucune série", "Les points apparaîtront après la saisie de valeurs.");
@@ -104,6 +110,7 @@ public final class DashboardChartCard extends SectionCard {
         List<ChartPoint> sourcePoints = normalize(points);
         List<ChartPoint> chartPoints = focusOnValueChanges(sourcePoints);
         displayedPoints = chartPoints;
+        axisSelector.setDataBounds(dataBounds(chartPoints));
         hideGuides();
         configureAxes(chartPoints);
 
@@ -130,6 +137,7 @@ public final class DashboardChartCard extends SectionCard {
 
     public void clear() {
         displayedPoints = List.of();
+        axisSelector.setDataBounds(null);
         chart.getData().clear();
         hideGuides();
         summary.setText("Aucun point affiché.");
@@ -181,9 +189,10 @@ public final class DashboardChartCard extends SectionCard {
             }
         });
 
+        DashboardChartAxisSelector selector = new DashboardChartAxisSelector();
         Label summary = Ui.help("Aucun point affiché.");
         summary.getStyleClass().add("chart-summary");
-        return new ChartParts(xAxis, yAxis, lineChart, layer, verticalGuide, horizontalGuide, hoverLabel, summary);
+        return new ChartParts(xAxis, yAxis, lineChart, selector, layer, verticalGuide, horizontalGuide, hoverLabel, summary);
     }
 
     private static Line guideLine() {
@@ -213,40 +222,53 @@ public final class DashboardChartCard extends SectionCard {
     }
 
     private void configureXAxis(List<ChartPoint> points) {
+        AxisOverrides overrides = axisSelector.axisOverrides();
+        double lower;
+        double upper;
+        long tick;
         if (points.isEmpty()) {
-            xTickUnit = DAY;
-            xAxis.setLowerBound(0);
-            xAxis.setUpperBound(DAY);
-            xAxis.setTickUnit(DAY);
-            return;
-        }
-        double min = points.stream().mapToDouble(ChartPoint::x).min().orElse(0);
-        double max = points.stream().mapToDouble(ChartPoint::x).max().orElse(min);
-        if (Double.compare(min, max) == 0) {
-            long window = LocalTime.MIDNIGHT.equals(points.get(0).date().toLocalTime()) ? DAY : HOUR;
-            xTickUnit = window;
-            xAxis.setLowerBound(min - window / 2.0);
-            xAxis.setUpperBound(max + window / 2.0);
-            xAxis.setTickUnit(xTickUnit);
-        } else if (points.size() <= 2) {
-            long duration = Math.max(SECOND, Math.round(max - min));
-            xTickUnit = duration;
-            xAxis.setLowerBound(min);
-            xAxis.setUpperBound(max);
-            xAxis.setTickUnit(xTickUnit);
+            lower = 0;
+            upper = DAY;
+            tick = DAY;
         } else {
-            long duration = Math.max(1L, Math.round(max - min));
-            xTickUnit = niceTimeTick(duration / 5.0);
-            long padding = Math.max(xTickUnit / 2L, Math.min(duration / 20L, xTickUnit));
-            double lower = Math.floor((min - padding) / xTickUnit) * xTickUnit;
-            double upper = Math.ceil((max + padding) / xTickUnit) * xTickUnit;
-            if (Double.compare(lower, upper) == 0) {
-                upper = lower + xTickUnit;
+            double min = points.stream().mapToDouble(ChartPoint::x).min().orElse(0);
+            double max = points.stream().mapToDouble(ChartPoint::x).max().orElse(min);
+            if (Double.compare(min, max) == 0) {
+                long window = LocalTime.MIDNIGHT.equals(points.get(0).date().toLocalTime()) ? DAY : HOUR;
+                lower = min - window / 2.0;
+                upper = max + window / 2.0;
+                tick = window;
+            } else if (points.size() <= 2) {
+                long duration = Math.max(SECOND, Math.round(max - min));
+                lower = min;
+                upper = max;
+                tick = duration;
+            } else {
+                long duration = Math.max(1L, Math.round(max - min));
+                tick = niceTimeTick(duration / 5.0);
+                long padding = Math.max(tick / 2L, Math.min(duration / 20L, tick));
+                lower = Math.floor((min - padding) / tick) * tick;
+                upper = Math.ceil((max + padding) / tick) * tick;
             }
-            xAxis.setLowerBound(lower);
-            xAxis.setUpperBound(upper);
-            xAxis.setTickUnit(xTickUnit);
         }
+        if (overrides.manual()) {
+            if (overrides.timeMin() != null) {
+                lower = epochMillis(overrides.timeMin());
+            }
+            if (overrides.timeMax() != null) {
+                upper = epochMillis(overrides.timeMax());
+            }
+            if (overrides.timeStep() != null) {
+                tick = Math.max(SECOND, overrides.timeStep().toMillis());
+            }
+        }
+        if (upper <= lower) {
+            upper = lower + Math.max(SECOND, tick);
+        }
+        xTickUnit = Math.max(SECOND, tick);
+        xAxis.setLowerBound(lower);
+        xAxis.setUpperBound(upper);
+        xAxis.setTickUnit(xTickUnit);
         xAxis.setTickLabelFormatter(new StringConverter<>() {
             @Override
             public String toString(Number value) {
@@ -261,42 +283,59 @@ public final class DashboardChartCard extends SectionCard {
     }
 
     private void configureYAxis(List<ChartPoint> points) {
-        if (points.isEmpty()) {
-            yTickUnit = 1;
-            yAxis.setLowerBound(0);
-            yAxis.setUpperBound(1);
-            yAxis.setTickUnit(1);
-            return;
-        }
-        double min = points.stream().mapToDouble(ChartPoint::y).min().orElse(0);
-        double max = points.stream().mapToDouble(ChartPoint::y).max().orElse(min);
-        boolean nonNegativeSeries = min >= 0;
+        AxisOverrides overrides = axisSelector.axisOverrides();
         double lower;
         double upper;
-        if (Double.compare(min, max) == 0) {
-            double base = Math.max(1.0, Math.abs(min));
-            double padding = niceNumber(base * 0.04, false);
-            lower = min - padding;
-            upper = max + padding;
+        double tick;
+        boolean nonNegativeSeries;
+        if (points.isEmpty()) {
+            lower = 0;
+            upper = 1;
+            tick = 1;
+            nonNegativeSeries = true;
+        } else {
+            double min = points.stream().mapToDouble(ChartPoint::y).min().orElse(0);
+            double max = points.stream().mapToDouble(ChartPoint::y).max().orElse(min);
+            nonNegativeSeries = min >= 0;
+            if (Double.compare(min, max) == 0) {
+                double base = Math.max(1.0, Math.abs(min));
+                double padding = niceNumber(base * 0.04, false);
+                lower = min - padding;
+                upper = max + padding;
+                if (nonNegativeSeries && lower < 0) {
+                    lower = 0;
+                }
+                tick = niceNumber(Math.max((upper - lower) / 2.0, 1.0), true);
+            } else {
+                double range = max - min;
+                double padding = Math.max(range * 0.06, Math.abs(max) * 0.003);
+                lower = min - padding;
+                upper = max + padding;
+                tick = niceNumber((upper - lower) / 5.0, true);
+            }
+        }
+        if (overrides.manual()) {
+            if (overrides.valueMin() != null) {
+                lower = overrides.valueMin().doubleValue();
+            }
+            if (overrides.valueMax() != null) {
+                upper = overrides.valueMax().doubleValue();
+            }
+            if (overrides.valueStep() != null) {
+                tick = overrides.valueStep().doubleValue();
+            }
+        } else {
+            lower = Math.floor(lower / tick) * tick;
+            upper = Math.ceil(upper / tick) * tick;
             if (nonNegativeSeries && lower < 0) {
                 lower = 0;
             }
-            yTickUnit = niceNumber(Math.max((upper - lower) / 2.0, 1.0), true);
-        } else {
-            double range = max - min;
-            double padding = Math.max(range * 0.06, Math.abs(max) * 0.003);
-            lower = min - padding;
-            upper = max + padding;
-            yTickUnit = niceNumber((upper - lower) / 5.0, true);
         }
-        lower = Math.floor(lower / yTickUnit) * yTickUnit;
-        upper = Math.ceil(upper / yTickUnit) * yTickUnit;
-        if (nonNegativeSeries && lower < 0) {
-            lower = 0;
+        tick = Math.max(tick, 0.000001);
+        if (upper <= lower) {
+            upper = lower + tick;
         }
-        if (Double.compare(lower, upper) == 0) {
-            upper = lower + yTickUnit;
-        }
+        yTickUnit = tick;
         yAxis.setLowerBound(lower);
         yAxis.setUpperBound(upper);
         yAxis.setTickUnit(yTickUnit);
@@ -372,7 +411,7 @@ public final class DashboardChartCard extends SectionCard {
         horizontalGuide.setStartY(position.getY());
         horizontalGuide.setEndY(position.getY());
 
-        hoverLabel.setText("Patrimoine total calculé\n" + formatPreciseDate(point.date()) + "\n" + DesktopFormatters.money(point.source().value()));
+        hoverLabel.setText("Patrimoine total affiché\n" + formatPreciseDate(point.date()) + "\n" + formatMoney(point));
         hoverLabel.autosize();
         double labelX = clamp(position.getX() + 12, plotBounds.getMinX() + 6, plotBounds.getMaxX() - hoverLabel.prefWidth(-1) - 6);
         double labelY = clamp(position.getY() - hoverLabel.prefHeight(-1) - 12, plotBounds.getMinY() + 6, plotBounds.getMaxY() - hoverLabel.prefHeight(-1) - 6);
@@ -394,7 +433,7 @@ public final class DashboardChartCard extends SectionCard {
         if (node == null || point == null) {
             return;
         }
-        Tooltip tooltip = new Tooltip("Patrimoine total calculé\n" + formatPreciseDate(point.date()) + "\n" + DesktopFormatters.money(point.source().value()));
+        Tooltip tooltip = new Tooltip("Patrimoine total affiché\n" + formatPreciseDate(point.date()) + "\n" + formatMoney(point));
         tooltip.getStyleClass().add("chart-tooltip");
         Tooltip.install(node, tooltip);
     }
@@ -464,6 +503,17 @@ public final class DashboardChartCard extends SectionCard {
         return first.roundedAmount().compareTo(second.roundedAmount()) == 0;
     }
 
+    private DataBounds dataBounds(List<ChartPoint> points) {
+        if (points == null || points.isEmpty()) {
+            return null;
+        }
+        LocalDateTime timeMin = points.stream().map(ChartPoint::date).min(Comparator.naturalOrder()).orElse(null);
+        LocalDateTime timeMax = points.stream().map(ChartPoint::date).max(Comparator.naturalOrder()).orElse(null);
+        BigDecimal valueMin = points.stream().map(ChartPoint::roundedAmount).min(Comparator.naturalOrder()).orElse(null);
+        BigDecimal valueMax = points.stream().map(ChartPoint::roundedAmount).max(Comparator.naturalOrder()).orElse(null);
+        return new DataBounds(timeMin, timeMax, valueMin, valueMax);
+    }
+
     private String summaryText(int sourceCount, int displayedCount) {
         if (sourceCount == displayedCount) {
             return displayedCount + " point" + plural(displayedCount) + " affiché" + plural(displayedCount) + ".";
@@ -510,6 +560,14 @@ public final class DashboardChartCard extends SectionCard {
         format.setMinimumFractionDigits(0);
         format.setMaximumFractionDigits(Math.min(6, decimals));
         return format.format(value);
+    }
+
+    private String formatMoney(ChartPoint point) {
+        NumberFormat format = NumberFormat.getNumberInstance(DISPLAY_LOCALE);
+        format.setMinimumFractionDigits(2);
+        format.setMaximumFractionDigits(2);
+        String currency = point.source().value().currencyCode() == null ? "" : " " + point.source().value().currencyCode();
+        return format.format(point.roundedAmount()) + currency;
     }
 
     private int decimalCount(double value) {
@@ -562,6 +620,10 @@ public final class DashboardChartCard extends SectionCard {
         return niceFraction * Math.pow(10, exponent);
     }
 
+    private long epochMillis(LocalDateTime dateTime) {
+        return dateTime.atZone(DISPLAY_ZONE).toInstant().toEpochMilli();
+    }
+
     private double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(value, max));
     }
@@ -577,6 +639,7 @@ public final class DashboardChartCard extends SectionCard {
             NumberAxis xAxis,
             NumberAxis yAxis,
             LineChart<Number, Number> chart,
+            DashboardChartAxisSelector selector,
             StackPane layer,
             Line verticalGuide,
             Line horizontalGuide,
