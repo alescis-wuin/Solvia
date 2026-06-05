@@ -2,6 +2,7 @@ package fr.seynax.solvia.desktop.ui;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -27,6 +28,7 @@ public final class DashboardView extends VBox {
     private final DashboardQualityCard quality = new DashboardQualityCard();
     private final DashboardAllocationCard allocation = new DashboardAllocationCard();
     private final DashboardAccountsCard accounts = new DashboardAccountsCard();
+    private final AtomicLong refreshGeneration = new AtomicLong();
     private volatile boolean backendReady;
     private boolean loadedOnce;
 
@@ -73,6 +75,7 @@ public final class DashboardView extends VBox {
         }
         if (!backendReady) {
             loadedOnce = false;
+            refreshGeneration.incrementAndGet();
             showUnavailableState(snapshot.message());
             return;
         }
@@ -94,16 +97,24 @@ public final class DashboardView extends VBox {
             showErrorState("Période invalide. La date de début doit être avant ou égale à la date de fin.");
             return;
         }
+        long generation = refreshGeneration.incrementAndGet();
+        FocusSnapshot focus = FocusSnapshot.capture(this);
         showLoadingState();
         apiClient.netWorth(end, "EUR")
                 .thenCombine(apiClient.performance(start, end, "EUR"), DashboardData::new)
                 .thenCombine(apiClient.netWorthSeries(start, end, filters.bucket(), filters.aggregation(), "EUR"), DashboardPayload::new)
                 .whenComplete((payload, error) -> Platform.runLater(() -> {
+                    if (generation != refreshGeneration.get()) {
+                        focus.restoreLater();
+                        return;
+                    }
                     if (error != null) {
                         showErrorState(DesktopFormatters.errorMessage(error));
+                        focus.restoreLater();
                         return;
                     }
                     update(payload);
+                    focus.restoreLater();
                 }));
     }
 
@@ -155,8 +166,8 @@ public final class DashboardView extends VBox {
     }
 
     private void showLoadingState() {
-        filters.setRefreshDisabled(true);
-        quickLinks.setRefreshDisabled(true);
+        filters.setRefreshDisabled(false);
+        quickLinks.setRefreshDisabled(false);
         state.hide();
     }
 
