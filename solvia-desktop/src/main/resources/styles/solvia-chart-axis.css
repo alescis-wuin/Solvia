@@ -1,0 +1,60 @@
+.axis-date-time-row {
+    -fx-spacing: 12px;
+    -fx-alignment: top-left;
+}
+.date-time-selector {
+    -fx-padding: 12px;
+    -fx-spacing: 8px;
+    -fx-background-color: rgba(19, 38, 61, 0.72);
+    -fx-border-color: rgba(116, 255, 208, 0.34);
+    -fx-border-width: 1px;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+    -fx-min-width: 320px;
+}
+.date-time-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -solvia-accent;
+}
+.date-time-date {
+    -fx-min-height: 40px;
+    -fx-pref-height: 40px;
+    -fx-pref-width: 210px;
+}
+.date-time-time-row, .date-time-quick-row {
+    -fx-spacing: 6px;
+    -fx-alignment: center-left;
+}
+.date-time-chip {
+    -fx-font-size: 12px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -solvia-muted;
+    -fx-min-width: 34px;
+    -fx-padding: 5px 8px;
+    -fx-background-color: rgba(111, 143, 189, 0.18);
+    -fx-background-radius: 999px;
+}
+.date-time-spinner {
+    -fx-pref-width: 76px;
+    -fx-min-height: 38px;
+    -fx-pref-height: 38px;
+}
+.date-time-spinner .text-field {
+    -fx-alignment: center;
+    -fx-font-family: "Hack", "Noto Sans Mono", "monospace";
+    -fx-font-weight: 900;
+}
+.date-time-quick-button {
+    -fx-min-height: 34px;
+    -fx-padding: 6px 10px;
+    -fx-font-size: 12px;
+    -fx-font-weight: 900;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+    -fx-border-color: rgba(136, 184, 255, 0.42);
+}
+.date-time-quick-button:hover {
+    -fx-border-color: -solvia-accent;
+}
