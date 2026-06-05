@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
@@ -49,6 +50,8 @@ public final class AccountsView extends VBox {
     private final Button deactivate = Ui.tooltip(new Button("Désactiver"), "Désactive le compte sélectionné sans supprimer son historique.");
     private final Button clearSelection = Ui.tooltip(new Button("Nouveau"), "Vide la sélection pour créer un nouveau compte.");
 
+    private final AtomicLong refreshGeneration = new AtomicLong();
+    private final AtomicLong snapshotGeneration = new AtomicLong();
     private volatile boolean backendReady;
     private AccountDto selectedAccount;
     private List<AccountDto> currentAccounts = List.of();
@@ -72,13 +75,17 @@ public final class AccountsView extends VBox {
     }
 
     public void backendStatusChanged(BackendStatusSnapshot snapshot) {
-        backendReady = snapshot.canLoadData();
         if (snapshot.state() == BackendConnectionState.CHECKING) {
-            setInputsDisabled(true);
-            state.show("Vérification", "Vérification du backend local...", "state-info");
+            if (!backendReady && currentAccounts.isEmpty()) {
+                setInputsDisabled(true);
+                state.show("Vérification", "Vérification du backend local...", "state-info");
+            }
             return;
         }
+        backendReady = snapshot.canLoadData();
         if (!backendReady) {
+            refreshGeneration.incrementAndGet();
+            snapshotGeneration.incrementAndGet();
             setInputsDisabled(true);
             clearData();
             empty.show("Backend indisponible", "Les comptes seront affichés quand le backend local sera connecté.");
@@ -94,12 +101,19 @@ public final class AccountsView extends VBox {
             state.show("Backend non prêt", "Backend local non prêt.", "state-warning");
             return;
         }
+        long generation = refreshGeneration.incrementAndGet();
         UUID previousSelection = selectedAccount == null ? null : selectedAccount.id();
+        FocusSnapshot focus = FocusSnapshot.capture(this);
         empty.hide();
         state.show("Chargement", "Chargement des comptes...", "state-info");
         apiClient.accounts().whenComplete((accounts, error) -> Platform.runLater(() -> {
+            if (generation != refreshGeneration.get()) {
+                focus.restoreLater();
+                return;
+            }
             if (error != null) {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
+                focus.restoreLater();
                 return;
             }
             currentAccounts = List.copyOf(accounts);
@@ -112,6 +126,7 @@ public final class AccountsView extends VBox {
                 empty.hide();
                 state.show("Comptes chargés", DesktopFormatters.count(accounts.size(), "compte", "comptes"), "state-success");
             }
+            focus.restoreLater();
         }));
     }
 
@@ -320,6 +335,7 @@ public final class AccountsView extends VBox {
         selectedAccount = account;
         if (account == null) {
             clearAccountForm();
+            snapshotGeneration.incrementAndGet();
             snapshotTable.getItems().clear();
             accountDetail.setText("Sélectionne un compte pour afficher son détail et son dernier solde connu.");
             setInputsDisabled(!backendReady);
@@ -335,17 +351,22 @@ public final class AccountsView extends VBox {
     }
 
     private void loadSnapshotHistory(UUID accountId) {
-        snapshotTable.getItems().clear();
+        long generation = snapshotGeneration.incrementAndGet();
+        FocusSnapshot focus = FocusSnapshot.capture(this);
         apiClient.accountSnapshots(accountId).whenComplete((snapshots, error) -> Platform.runLater(() -> {
+            if (generation != snapshotGeneration.get() || selectedAccount == null || !selectedAccount.id().equals(accountId)) {
+                focus.restoreLater();
+                return;
+            }
             if (error != null) {
                 state.show("Erreur", DesktopFormatters.errorMessage(error), "state-error");
+                focus.restoreLater();
                 return;
             }
             List<AccountSnapshotDto> sorted = snapshots.stream().sorted(snapshotComparator()).toList();
             snapshotTable.getItems().setAll(sorted.stream().map(AccountSnapshotRow::from).toList());
-            if (selectedAccount != null && selectedAccount.id().equals(accountId)) {
-                renderAccountDetail(selectedAccount, sorted);
-            }
+            renderAccountDetail(selectedAccount, sorted);
+            focus.restoreLater();
         }));
     }
 
@@ -370,6 +391,7 @@ public final class AccountsView extends VBox {
 
     private void clearSelectedAccount() {
         selectedAccount = null;
+        snapshotGeneration.incrementAndGet();
         table.getSelectionModel().clearSelection();
         clearAccountForm();
         snapshotTable.getItems().clear();
