@@ -1,0 +1,95 @@
+.root {
+    -solvia-bg: #08090c;
+    -solvia-surface: #101218;
+    -solvia-raised: #161922;
+    -solvia-border: #22262f;
+    -solvia-text: #f4f6fb;
+    -solvia-muted: #a2a9b8;
+    -solvia-accent: #c2f94e;
+    -solvia-accent-2: #2de2e6;
+    -solvia-warning: #ffc24b;
+    -solvia-danger: #ff6b6b;
+    -solvia-info: #9b8cff;
+    -fx-background-color: -solvia-bg;
+}
+
+.solvia-shell,
+.content-view {
+    -fx-background-color: -solvia-bg;
+}
+
+.sidebar {
+    -fx-background-color: #0c0e13;
+    -fx-border-color: #191c24;
+    -fx-border-width: 0 1px 0 0;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+.rail-logo {
+    -fx-min-width: 46px;
+    -fx-min-height: 46px;
+    -fx-pref-width: 46px;
+    -fx-pref-height: 46px;
+    -fx-alignment: center;
+    -fx-background-color: linear-gradient(to bottom right, -solvia-accent, -solvia-accent-2);
+    -fx-background-radius: 15px;
+    -fx-text-fill: #08090c;
+    -fx-font-size: 24px;
+    -fx-font-weight: 900;
+}
+
+.rail-avatar {
+    -fx-min-width: 44px;
+    -fx-min-height: 44px;
+    -fx-pref-width: 44px;
+    -fx-pref-height: 44px;
+    -fx-alignment: center;
+    -fx-background-color: linear-gradient(to bottom right, #9b8cff, -solvia-accent-2);
+    -fx-background-radius: 14px;
+    -fx-text-fill: #08090c;
+    -fx-font-weight: 900;
+}
+
+.rail-button {
+    -fx-min-width: 50px;
+    -fx-pref-width: 50px;
+    -fx-min-height: 50px;
+    -fx-pref-height: 50px;
+    -fx-padding: 0;
+    -fx-background-radius: 15px;
+    -fx-border-radius: 15px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -solvia-muted;
+    -fx-font-size: 20px;
+    -fx-font-weight: 900;
+}
+
+.rail-button:hover {
+    -fx-background-color: -solvia-raised;
+    -fx-text-fill: -solvia-text;
+}
+
+.rail-button:disabled {
+    -fx-opacity: 1;
+    -fx-background-color: -solvia-accent;
+    -fx-text-fill: #08090c;
+}
+
+.section-card,
+.metric-card,
+.state-message,
+.empty-state,
+.table-view,
+.chart {
+    -fx-background-color: linear-gradient(to bottom, -solvia-surface, #0e1016);
+    -fx-border-color: -solvia-border;
+    -fx-background-radius: 22px;
+    -fx-border-radius: 22px;
+}
+
+.context-menu {
+    -fx-background-color: -solvia-surface;
+    -fx-border-color: -solvia-border;
+}
