@@ -56,7 +56,7 @@ public final class DashboardAccountsCard extends SectionCard {
     private VBox tile(AccountRow row) {
         Label icon = Ui.label(row.initials(), "dashboard-account-icon");
         Label name = Ui.label(row.name(), "dashboard-account-name");
-        Label value = Ui.label(row.value(), "dashboard-account-value", "monospace");
+        Label value = Ui.style(Ui.label(row.value(), "dashboard-account-value"), "monospace");
         Label detail = Ui.help("Valorisation actuelle");
         detail.getStyleClass().add("dashboard-account-detail");
 
