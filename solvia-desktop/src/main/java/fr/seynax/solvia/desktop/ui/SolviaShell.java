@@ -8,15 +8,13 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 public final class SolviaShell extends BorderPane {
-    private final Label title = new Label("Dashboard");
     private final Label status = new Label("Ready");
     private final VBox top = new VBox(10);
     private final VBox navigation = new VBox(8);
@@ -24,17 +22,17 @@ public final class SolviaShell extends BorderPane {
     private final Map<String, Node> pages = new LinkedHashMap<>();
 
     public SolviaShell() {
-        top.getChildren().add(header());
         setTop(top);
         setLeft(sidebar());
-        setBottom(footer());
         getStyleClass().add("solvia-shell");
     }
 
     public void addPage(String label, Node page) {
-        Button button = new Button(label);
+        Button button = new Button(iconLabel(label));
+        button.setTooltip(new Tooltip(label));
+        button.getStyleClass().add("rail-button");
         button.setMaxWidth(Double.MAX_VALUE);
-        button.setAlignment(Pos.CENTER_LEFT);
+        button.setAlignment(Pos.CENTER);
         button.setOnAction(event -> showPage(label));
         buttons.put(label, button);
         pages.put(label, page);
@@ -49,9 +47,12 @@ public final class SolviaShell extends BorderPane {
         if (page == null) {
             return;
         }
-        title.setText(label);
         setCenter(page);
-        buttons.forEach((buttonLabel, button) -> button.setDisable(buttonLabel.equals(label)));
+        buttons.forEach((buttonLabel, button) -> {
+            boolean selected = buttonLabel.equals(label);
+            button.setDisable(selected);
+            button.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("selected"), selected);
+        });
     }
 
     public void setStatus(String text) {
@@ -59,43 +60,38 @@ public final class SolviaShell extends BorderPane {
     }
 
     public void setBackendStatusBanner(Node banner) {
-        if (top.getChildren().size() > 1) {
-            top.getChildren().remove(1, top.getChildren().size());
-        }
+        top.getChildren().clear();
         if (banner != null) {
             top.getChildren().add(banner);
         }
     }
 
-    private Node header() {
-        title.getStyleClass().add("screen-title");
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        Label backend = new Label("Local-first");
-        backend.getStyleClass().add("help-text");
-        HBox header = new HBox(16, title, spacer, backend);
-        header.getStyleClass().add("header");
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(16, 20, 12, 20));
-        return header;
-    }
-
     private Node sidebar() {
-        Label appTitle = new Label("Solvia");
-        appTitle.getStyleClass().add("app-title");
+        Label appTitle = new Label("∿");
+        appTitle.getStyleClass().add("rail-logo");
         navigation.setFillWidth(true);
-        VBox sidebar = new VBox(16, appTitle, new Separator(), navigation);
+        Region spacer = new Region();
+        VBox.setVgrow(spacer, Priority.ALWAYS);
+        Label avatar = new Label("SX");
+        avatar.getStyleClass().add("rail-avatar");
+        VBox sidebar = new VBox(16, appTitle, navigation, spacer, avatar);
         sidebar.getStyleClass().add("sidebar");
-        sidebar.setPadding(new Insets(20, 12, 20, 12));
-        sidebar.setPrefWidth(220);
+        sidebar.setAlignment(Pos.TOP_CENTER);
+        sidebar.setPadding(new Insets(18, 10, 18, 10));
+        sidebar.setPrefWidth(76);
+        sidebar.setMinWidth(76);
+        sidebar.setMaxWidth(76);
         return sidebar;
     }
 
-    private Node footer() {
-        HBox footer = new HBox(status);
-        footer.getStyleClass().add("footer");
-        footer.setAlignment(Pos.CENTER_LEFT);
-        footer.setPadding(new Insets(8, 20, 12, 20));
-        return footer;
+    private String iconLabel(String label) {
+        return switch (label) {
+            case "Dashboard" -> "▦";
+            case "Comptes" -> "▭";
+            case "Actifs & positions" -> "⌁";
+            case "Saisie" -> "+";
+            case "Système" -> "⚙";
+            default -> label == null || label.isBlank() ? "·" : label.substring(0, 1).toUpperCase();
+        };
     }
 }
