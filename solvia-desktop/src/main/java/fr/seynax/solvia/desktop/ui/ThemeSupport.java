@@ -34,6 +34,7 @@ public final class ThemeSupport {
         loadFirstAvailable(LUCIOLE_CANDIDATES);
         loadFirstAvailable(HACK_CANDIDATES);
         addStylesheet(scene, "/styles/solvia-dark.css");
+        addStylesheet(scene, "/styles/solvia-target.css");
         addStylesheet(scene, "/styles/solvia-dashboard.css");
         addStylesheet(scene, "/styles/solvia-chart-axis.css");
     }
