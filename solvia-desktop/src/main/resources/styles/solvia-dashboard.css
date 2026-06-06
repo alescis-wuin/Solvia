@@ -1,19 +1,92 @@
+.dashboard-view {
+    -fx-background-color: transparent;
+}
+
+.dashboard-header {
+    -fx-alignment: center-left;
+}
+
+.dashboard-hello {
+    -fx-font-size: 30px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -solvia-text;
+}
+
+.dashboard-subtitle {
+    -fx-font-size: 14px;
+    -fx-text-fill: -solvia-muted;
+}
+
+.dashboard-search {
+    -fx-pref-width: 230px;
+    -fx-min-height: 44px;
+    -fx-pref-height: 44px;
+}
+
+.dashboard-invest-button {
+    -fx-min-height: 44px;
+    -fx-padding: 10px 20px;
+    -fx-background-color: -solvia-accent;
+    -fx-text-fill: #08090c;
+    -fx-border-color: transparent;
+}
+
+.dashboard-top-row {
+    -fx-alignment: center-left;
+}
+
+.dashboard-filters {
+    -fx-padding: 0;
+}
+
+.dashboard-filter-row,
+.time-step-selector-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 12px;
+}
+
+.dashboard-range-row {
+    -fx-padding: 4px;
+    -fx-background-color: -solvia-raised;
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+    -fx-border-color: -solvia-border;
+    -fx-border-width: 1px;
+    -fx-max-width: 330px;
+}
+
+.range-button {
+    -fx-min-width: 54px;
+    -fx-min-height: 36px;
+    -fx-padding: 6px 12px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: -solvia-muted;
+}
+
+.range-button:selected {
+    -fx-background-color: -solvia-accent;
+    -fx-text-fill: #08090c;
+}
+
 .dashboard-body {
     -fx-alignment: top-left;
 }
 
+.dashboard-main-column {
+    -fx-fill-width: true;
+}
+
 .dashboard-side {
-    -fx-pref-width: 420px;
-    -fx-min-width: 360px;
-    -fx-max-width: 460px;
+    -fx-pref-width: 500px;
+    -fx-min-width: 390px;
+    -fx-max-width: 540px;
 }
 
-.dashboard-action-row {
-    -fx-alignment: center-left;
-}
-
-.dashboard-action-row .button {
-    -fx-min-width: 145px;
+.dashboard-toolbar {
+    -fx-alignment: center-right;
 }
 
 .primary-action {
@@ -32,12 +105,152 @@
 .metric-card {
     -fx-min-width: 180px;
     -fx-pref-width: 260px;
+    -fx-background-color: linear-gradient(to bottom, -solvia-surface, #0e1016);
+    -fx-border-color: -solvia-border;
+    -fx-border-width: 1px;
+    -fx-background-radius: 18px;
+    -fx-border-radius: 18px;
+    -fx-padding: 18px;
+}
+
+.metric-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -solvia-muted;
 }
 
 .metric-value {
-    -fx-font-size: 22px;
+    -fx-font-size: 24px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -solvia-text;
+}
+
+.metric-caption {
+    -fx-font-size: 13px;
+    -fx-text-fill: -solvia-muted;
+}
+
+.dashboard-chart-layer {
+    -fx-min-height: 420px;
 }
 
 .chart {
     -fx-min-height: 420px;
+    -fx-background-color: transparent;
+}
+
+.chart-plot-background {
+    -fx-background-color: #101812;
+}
+
+.chart-series-line {
+    -fx-stroke: -solvia-accent;
+    -fx-stroke-width: 3px;
+}
+
+.chart-line-symbol {
+    -fx-background-color: -solvia-accent, -solvia-bg;
+    -fx-background-insets: 0, 3;
+    -fx-background-radius: 7px;
+    -fx-padding: 6px;
+}
+
+.dashboard-account-grid {
+    -fx-pref-columns: 3;
+}
+
+.dashboard-account-tile {
+    -fx-background-color: -solvia-raised;
+    -fx-border-color: -solvia-border;
+    -fx-border-width: 1px;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+    -fx-padding: 18px;
+}
+
+.dashboard-account-icon {
+    -fx-min-width: 38px;
+    -fx-min-height: 38px;
+    -fx-alignment: center;
+    -fx-background-color: #203020;
+    -fx-background-radius: 12px;
+    -fx-text-fill: -solvia-accent;
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+}
+
+.dashboard-account-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -solvia-muted;
+}
+
+.dashboard-account-value {
+    -fx-font-size: 23px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -solvia-text;
+}
+
+.dashboard-account-detail {
+    -fx-font-size: 12px;
+}
+
+.dashboard-allocation-content {
+    -fx-alignment: center-left;
+}
+
+.dashboard-allocation-chart {
+    -fx-min-width: 170px;
+    -fx-min-height: 170px;
+    -fx-pref-width: 190px;
+    -fx-pref-height: 190px;
+}
+
+.chart-pie {
+    -fx-border-width: 0;
+}
+
+.chart-pie.default-color0 { -fx-pie-color: -solvia-accent; }
+.chart-pie.default-color1 { -fx-pie-color: -solvia-accent-2; }
+.chart-pie.default-color2 { -fx-pie-color: -solvia-warning; }
+.chart-pie.default-color3 { -fx-pie-color: #9b8cff; }
+.chart-pie.default-color4 { -fx-pie-color: #ff8a3d; }
+.chart-pie.default-color5 { -fx-pie-color: #34e5a1; }
+.chart-pie.default-color6 { -fx-pie-color: #ff6b6b; }
+.chart-pie.default-color7 { -fx-pie-color: #a2a9b8; }
+
+.allocation-row {
+    -fx-alignment: center-left;
+}
+
+.allocation-dot {
+    -fx-min-width: 10px;
+    -fx-min-height: 10px;
+    -fx-pref-width: 10px;
+    -fx-pref-height: 10px;
+    -fx-background-color: -solvia-accent;
+    -fx-background-radius: 4px;
+}
+
+.allocation-name {
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+}
+
+.allocation-share,
+.allocation-value {
+    -fx-font-size: 13px;
+    -fx-text-fill: -solvia-muted;
+}
+
+.hamburger-menu {
+    -fx-background-color: -solvia-raised;
+}
+
+.icon-button,
+.hamburger-menu {
+    -fx-min-width: 46px;
+    -fx-pref-width: 46px;
+    -fx-min-height: 46px;
+    -fx-pref-height: 46px;
 }
