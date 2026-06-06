@@ -1,6 +1,7 @@
 package fr.seynax.solvia.desktop.ui;
 
 import java.util.List;
+import java.util.Objects;
 
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -13,6 +14,7 @@ public final class DashboardTimeStepSelector extends VBox {
     private final Label selected = Ui.label("—", "monospace");
     private final Label detail = Ui.help("—");
     private Runnable onChanged = () -> { };
+    private boolean silentSelection;
 
     public DashboardTimeStepSelector() {
         getStyleClass().add("time-step-selector");
@@ -25,9 +27,11 @@ public final class DashboardTimeStepSelector extends VBox {
                 .orElse(selector.getItems().get(0)));
         selector.valueProperty().addListener((observable, previous, value) -> {
             render(value);
-            onChanged.run();
+            if (!silentSelection && !Objects.equals(previous, value)) {
+                onChanged.run();
+            }
         });
-        HBox row = Ui.style(new HBox(10, Ui.fieldLabel("Pas", selector), selector, selected), "form-row");
+        HBox row = Ui.style(new HBox(10, Ui.fieldLabel("Pas", selector), selector, selected), "form-row", "time-step-selector-row");
         getChildren().addAll(row, detail);
         render(selector.getValue());
     }
@@ -46,12 +50,39 @@ public final class DashboardTimeStepSelector extends VBox {
         return selector.getValue();
     }
 
+    public void selectCode(String code) {
+        selectCode(code, false);
+    }
+
+    public void selectCodeSilently(String code) {
+        selectCode(code, true);
+    }
+
     public void onChanged(Runnable onChanged) {
         this.onChanged = onChanged == null ? () -> { } : onChanged;
     }
 
     public void setSelectorDisabled(boolean disabled) {
         selector.setDisable(disabled);
+    }
+
+    private void selectCode(String code, boolean silent) {
+        if (code == null || code.isBlank()) {
+            return;
+        }
+        DashboardTimeStep next = selector.getItems().stream()
+                .filter(step -> code.equals(step.code()))
+                .findFirst()
+                .orElse(null);
+        if (next == null || Objects.equals(selector.getValue(), next)) {
+            return;
+        }
+        silentSelection = silent;
+        try {
+            selector.setValue(next);
+        } finally {
+            silentSelection = false;
+        }
     }
 
     private void render(DashboardTimeStep step) {
