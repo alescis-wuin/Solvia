@@ -2,12 +2,19 @@ package fr.seynax.solvia.desktop.ui;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import fr.seynax.solvia.desktop.api.ApiDtos.NetWorthDto;
@@ -18,6 +25,8 @@ import fr.seynax.solvia.desktop.api.BackendStatusSnapshot;
 import fr.seynax.solvia.desktop.api.SolviaApiClient;
 
 public final class DashboardView extends VBox {
+
+    private static final DateTimeFormatter HEADER_DATE = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Locale.FRANCE);
 
     private final SolviaApiClient apiClient;
     private final DashboardFilters filters = new DashboardFilters();
@@ -50,16 +59,16 @@ public final class DashboardView extends VBox {
 
     public DashboardView(SolviaApiClient apiClient, DesktopEventBus eventBus, Runnable openDataEntry, Runnable openAccounts, Runnable openAssets, Runnable openSystem) {
         this.apiClient = apiClient;
-        getStyleClass().add("content-view");
-        setSpacing(18);
-        setPadding(new Insets(20));
+        getStyleClass().addAll("content-view", "dashboard-view");
+        setSpacing(22);
+        setPadding(new Insets(30, 34, 44, 34));
         filters.onRefresh(this::refresh);
         quickLinks.onRefresh(this::refresh);
         quickLinks.onDataEntry(openDataEntry);
         quickLinks.onAccounts(openAccounts);
         quickLinks.onAssets(openAssets);
         quickLinks.onSystem(openSystem);
-        getChildren().addAll(topRow(), metrics, state, dashboardBody());
+        getChildren().addAll(dashboardHeader(openDataEntry), metrics, state, topRow(), dashboardBody());
         VBox.setVgrow(chart, Priority.ALWAYS);
         showWaitingState("Vérification du backend local...");
     }
@@ -118,16 +127,44 @@ public final class DashboardView extends VBox {
                 }));
     }
 
+    private HBox dashboardHeader(Runnable openDataEntry) {
+        Label title = Ui.label("Bonjour", "dashboard-hello");
+        Label date = Ui.label(LocalDate.now().format(HEADER_DATE) + " · Données locales", "dashboard-subtitle");
+        VBox copy = new VBox(4, title, date);
+
+        TextField search = Ui.tooltip(new TextField(), "Recherche visuelle. La recherche active sera branchée quand les flux d'actifs exposeront une liste valorisée.");
+        search.setPromptText("Rechercher un actif...");
+        search.getStyleClass().add("dashboard-search");
+        search.setDisable(true);
+
+        Button invest = Ui.tooltip(new Button("+ Investir"), "Ouvre la saisie pour ajouter une valorisation ou un flux.");
+        invest.getStyleClass().addAll("dashboard-invest-button", "primary-action");
+        invest.setOnAction(event -> {
+            if (openDataEntry != null) {
+                openDataEntry.run();
+            }
+        });
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox row = new HBox(16, copy, spacer, search, invest, quickLinks);
+        row.getStyleClass().add("dashboard-header");
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
     private HBox topRow() {
-        HBox row = Ui.style(new HBox(16, filters, quickLinks), "dashboard-top-row");
+        HBox row = Ui.style(new HBox(16, filters), "dashboard-top-row");
         HBox.setHgrow(filters, Priority.ALWAYS);
         return row;
     }
 
     private HBox dashboardBody() {
-        VBox side = Ui.style(new VBox(18, quality, allocation, accounts), "dashboard-side");
-        HBox body = Ui.style(new HBox(18, chart, side), "dashboard-body");
-        HBox.setHgrow(chart, Priority.ALWAYS);
+        VBox main = Ui.style(new VBox(18, chart, accounts), "dashboard-main-column");
+        VBox side = Ui.style(new VBox(18, allocation, quality), "dashboard-side");
+        HBox body = Ui.style(new HBox(18, main, side), "dashboard-body");
+        HBox.setHgrow(main, Priority.ALWAYS);
+        VBox.setVgrow(chart, Priority.ALWAYS);
         return body;
     }
 
